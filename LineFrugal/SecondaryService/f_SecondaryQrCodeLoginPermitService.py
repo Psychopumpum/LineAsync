@@ -25,14 +25,6 @@ from .ttypes import *
 
 class Iface(object):
 
-    async def cancelPinCode(self, ctx, request):
-        """
-        Args:
-            ctx: FContext
-            request: CancelPinCodeRequest
-        """
-        pass
-
     async def getLoginActorContext(self, ctx, request):
         """
         Args:
@@ -41,11 +33,11 @@ class Iface(object):
         """
         pass
 
-    async def verifyPinCode(self, ctx, request):
+    async def cancelPinCode(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: VerifyPinCodeRequest
+            request: CancelPinCodeRequest
         """
         pass
 
@@ -54,6 +46,14 @@ class Iface(object):
         Args:
             ctx: FContext
             request: VerifyQrCodeRequest
+        """
+        pass
+
+    async def verifyPinCode(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: VerifyPinCodeRequest
         """
         pass
 
@@ -76,46 +76,12 @@ class Client(Iface):
         self._protocol_factory = provider.get_protocol_factory()
         middleware += provider.get_middleware()
         self._methods = {
-            'cancelPinCode': Method(self._cancelPinCode, middleware),
             'getLoginActorContext': Method(self._getLoginActorContext, middleware),
-            'verifyPinCode': Method(self._verifyPinCode, middleware),
+            'cancelPinCode': Method(self._cancelPinCode, middleware),
             'verifyQrCode': Method(self._verifyQrCode, middleware),
+            'verifyPinCode': Method(self._verifyPinCode, middleware),
         }
 
-    async def cancelPinCode(self, ctx, request):
-        """
-        Args:
-            ctx: FContext
-            request: CancelPinCodeRequest
-        """
-        return await self._methods['cancelPinCode']([ctx, request])
-
-    async def _cancelPinCode(self, ctx, request):
-        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
-        oprot = self._protocol_factory.get_protocol(memory_buffer)
-        oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('cancelPinCode', TMessageType.CALL, 0)
-        args = cancelPinCode_args()
-        args.request = request
-        args.write(oprot)
-        oprot.writeMessageEnd()
-        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
-
-        iprot = self._protocol_factory.get_protocol(response_transport)
-        iprot.read_response_headers(ctx)
-        _, mtype, _ = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
-                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
-            raise x
-        result = cancelPinCode_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.e is not None:
-            raise result.e
     async def getLoginActorContext(self, ctx, request):
         """
         Args:
@@ -154,20 +120,20 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getLoginActorContext failed: unknown result")
 
-    async def verifyPinCode(self, ctx, request):
+    async def cancelPinCode(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: VerifyPinCodeRequest
+            request: CancelPinCodeRequest
         """
-        return await self._methods['verifyPinCode']([ctx, request])
+        return await self._methods['cancelPinCode']([ctx, request])
 
-    async def _verifyPinCode(self, ctx, request):
+    async def _cancelPinCode(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('verifyPinCode', TMessageType.CALL, 0)
-        args = verifyPinCode_args()
+        oprot.writeMessageBegin('cancelPinCode', TMessageType.CALL, 0)
+        args = cancelPinCode_args()
         args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
@@ -183,11 +149,15 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = verifyPinCode_result()
+        result = cancelPinCode_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "cancelPinCode failed: unknown result")
+
     async def verifyQrCode(self, ctx, request):
         """
         Args:
@@ -222,6 +192,48 @@ class Client(Iface):
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "verifyQrCode failed: unknown result")
+
+    async def verifyPinCode(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: VerifyPinCodeRequest
+        """
+        return await self._methods['verifyPinCode']([ctx, request])
+
+    async def _verifyPinCode(self, ctx, request):
+        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
+        oprot = self._protocol_factory.get_protocol(memory_buffer)
+        oprot.write_request_headers(ctx)
+        oprot.writeMessageBegin('verifyPinCode', TMessageType.CALL, 0)
+        args = verifyPinCode_args()
+        args.request = request
+        args.write(oprot)
+        oprot.writeMessageEnd()
+        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
+
+        iprot = self._protocol_factory.get_protocol(response_transport)
+        iprot.read_response_headers(ctx)
+        _, mtype, _ = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
+                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
+            raise x
+        result = verifyPinCode_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.e is not None:
+            raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "verifyPinCode failed: unknown result")
+
 
 class Processor(FBaseProcessor):
 
@@ -236,49 +248,10 @@ class Processor(FBaseProcessor):
             middleware = [middleware]
 
         super(Processor, self).__init__()
-        self.add_to_processor_map('cancelPinCode', _cancelPinCode(Method(handler.cancelPinCode, middleware), self.get_write_lock()))
         self.add_to_processor_map('getLoginActorContext', _getLoginActorContext(Method(handler.getLoginActorContext, middleware), self.get_write_lock()))
-        self.add_to_processor_map('verifyPinCode', _verifyPinCode(Method(handler.verifyPinCode, middleware), self.get_write_lock()))
+        self.add_to_processor_map('cancelPinCode', _cancelPinCode(Method(handler.cancelPinCode, middleware), self.get_write_lock()))
         self.add_to_processor_map('verifyQrCode', _verifyQrCode(Method(handler.verifyQrCode, middleware), self.get_write_lock()))
-
-
-class _cancelPinCode(FProcessorFunction):
-
-    def __init__(self, handler, lock):
-        super(_cancelPinCode, self).__init__(handler, lock)
-
-    async def process(self, ctx, iprot, oprot):
-        args = cancelPinCode_args()
-        args.read(iprot)
-        iprot.readMessageEnd()
-        result = cancelPinCode_result()
-        try:
-            ret = self._handler([ctx, args.request])
-            if inspect.iscoroutine(ret):
-                ret = await ret
-        except TApplicationException as ex:
-            async with self._lock:
-                _write_application_exception(ctx, oprot, "cancelPinCode", exception=ex)
-                return
-        except SecondaryQrCodeException as e:
-            result.e = e
-        except Exception as e:
-            async with self._lock:
-                _write_application_exception(ctx, oprot, "cancelPinCode", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
-            raise
-        async with self._lock:
-            try:
-                oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('cancelPinCode', TMessageType.REPLY, 0)
-                result.write(oprot)
-                oprot.writeMessageEnd()
-                oprot.get_transport().flush()
-            except TTransportException as e:
-                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
-                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "cancelPinCode", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
-                else:
-                    raise e
+        self.add_to_processor_map('verifyPinCode', _verifyPinCode(Method(handler.verifyPinCode, middleware), self.get_write_lock()))
 
 
 class _getLoginActorContext(FProcessorFunction):
@@ -321,41 +294,42 @@ class _getLoginActorContext(FProcessorFunction):
                     raise e
 
 
-class _verifyPinCode(FProcessorFunction):
+class _cancelPinCode(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_verifyPinCode, self).__init__(handler, lock)
+        super(_cancelPinCode, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = verifyPinCode_args()
+        args = cancelPinCode_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = verifyPinCode_result()
+        result = cancelPinCode_result()
         try:
             ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
+            result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "verifyPinCode", exception=ex)
+                _write_application_exception(ctx, oprot, "cancelPinCode", exception=ex)
                 return
         except SecondaryQrCodeException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "verifyPinCode", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "cancelPinCode", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('verifyPinCode', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('cancelPinCode', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "verifyPinCode", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "cancelPinCode", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
@@ -374,6 +348,7 @@ class _verifyQrCode(FProcessorFunction):
             ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
+            result.success = ret
         except TApplicationException as ex:
             async with self._lock:
                 _write_application_exception(ctx, oprot, "verifyQrCode", exception=ex)
@@ -399,6 +374,46 @@ class _verifyQrCode(FProcessorFunction):
                     raise e
 
 
+class _verifyPinCode(FProcessorFunction):
+
+    def __init__(self, handler, lock):
+        super(_verifyPinCode, self).__init__(handler, lock)
+
+    async def process(self, ctx, iprot, oprot):
+        args = verifyPinCode_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = verifyPinCode_result()
+        try:
+            ret = self._handler([ctx, args.request])
+            if inspect.iscoroutine(ret):
+                ret = await ret
+            result.success = ret
+        except TApplicationException as ex:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "verifyPinCode", exception=ex)
+                return
+        except SecondaryQrCodeException as e:
+            result.e = e
+        except Exception as e:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "verifyPinCode", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+            raise
+        async with self._lock:
+            try:
+                oprot.write_response_headers(ctx)
+                oprot.writeMessageBegin('verifyPinCode', TMessageType.REPLY, 0)
+                result.write(oprot)
+                oprot.writeMessageEnd()
+                oprot.get_transport().flush()
+            except TTransportException as e:
+                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
+                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
+                    raise _write_application_exception(ctx, oprot, "verifyPinCode", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                else:
+                    raise e
+
+
 def _write_application_exception(ctx, oprot, method, ex_code=None, message=None, exception=None):
     if exception is not None:
         x = exception
@@ -410,116 +425,6 @@ def _write_application_exception(ctx, oprot, method, ex_code=None, message=None,
     oprot.writeMessageEnd()
     oprot.get_transport().flush()
     return x
-
-class cancelPinCode_args(object):
-    """
-    Attributes:
-     - request
-    """
-    def __init__(self, request=None):
-        self.request = request
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.request = CancelPinCodeRequest()
-                    self.request.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('cancelPinCode_args')
-        if self.request is not None:
-            oprot.writeFieldBegin('request', TType.STRUCT, 1)
-            self.request.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.request))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-class cancelPinCode_result(object):
-    """
-    Attributes:
-     - e
-    """
-    def __init__(self, e=None):
-        self.e = e
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.e = SecondaryQrCodeException()
-                    self.e.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('cancelPinCode_result')
-        if self.e is not None:
-            oprot.writeFieldBegin('e', TType.STRUCT, 1)
-            self.e.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.e))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
 
 class getLoginActorContext_args(object):
     """
@@ -644,7 +549,7 @@ class getLoginActorContext_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class verifyPinCode_args(object):
+class cancelPinCode_args(object):
     """
     Attributes:
      - request
@@ -660,7 +565,7 @@ class verifyPinCode_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = VerifyPinCodeRequest()
+                    self.request = CancelPinCodeRequest()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -672,7 +577,7 @@ class verifyPinCode_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('verifyPinCode_args')
+        oprot.writeStructBegin('cancelPinCode_args')
         if self.request is not None:
             oprot.writeFieldBegin('request', TType.STRUCT, 1)
             self.request.write(oprot)
@@ -699,12 +604,14 @@ class verifyPinCode_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class verifyPinCode_result(object):
+class cancelPinCode_result(object):
     """
     Attributes:
+     - success
      - e
     """
-    def __init__(self, e=None):
+    def __init__(self, success=None, e=None):
+        self.success = success
         self.e = e
 
     def read(self, iprot):
@@ -713,7 +620,13 @@ class verifyPinCode_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = CancelPinCodeResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.e = SecondaryQrCodeException()
                     self.e.read(iprot)
@@ -727,7 +640,11 @@ class verifyPinCode_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('verifyPinCode_result')
+        oprot.writeStructBegin('cancelPinCode_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.e is not None:
             oprot.writeFieldBegin('e', TType.STRUCT, 1)
             self.e.write(oprot)
@@ -740,6 +657,7 @@ class verifyPinCode_result(object):
 
     def __hash__(self):
         value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
         value = (value * 31) ^ hash(make_hashable(self.e))
         return value
 
@@ -812,9 +730,11 @@ class verifyQrCode_args(object):
 class verifyQrCode_result(object):
     """
     Attributes:
+     - success
      - e
     """
-    def __init__(self, e=None):
+    def __init__(self, success=None, e=None):
+        self.success = success
         self.e = e
 
     def read(self, iprot):
@@ -823,7 +743,13 @@ class verifyQrCode_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = VerifyQrCodeResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.e = SecondaryQrCodeException()
                     self.e.read(iprot)
@@ -838,6 +764,10 @@ class verifyQrCode_result(object):
     def write(self, oprot):
         self.validate()
         oprot.writeStructBegin('verifyQrCode_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.e is not None:
             oprot.writeFieldBegin('e', TType.STRUCT, 1)
             self.e.write(oprot)
@@ -850,6 +780,130 @@ class verifyQrCode_result(object):
 
     def __hash__(self):
         value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
+        value = (value * 31) ^ hash(make_hashable(self.e))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class verifyPinCode_args(object):
+    """
+    Attributes:
+     - request
+    """
+    def __init__(self, request=None):
+        self.request = request
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = VerifyPinCodeRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('verifyPinCode_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.request))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class verifyPinCode_result(object):
+    """
+    Attributes:
+     - success
+     - e
+    """
+    def __init__(self, success=None, e=None):
+        self.success = success
+        self.e = e
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = VerifyPinCodeResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
+                if ftype == TType.STRUCT:
+                    self.e = SecondaryQrCodeException()
+                    self.e.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('verifyPinCode_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        if self.e is not None:
+            oprot.writeFieldBegin('e', TType.STRUCT, 1)
+            self.e.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
         value = (value * 31) ^ hash(make_hashable(self.e))
         return value
 

@@ -49,6 +49,14 @@ class Iface(object):
         """
         pass
 
+    async def verifyCertificate(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: VerifyCertificateRequest
+        """
+        pass
+
     async def qrCodeLogin(self, ctx, request):
         """
         Args:
@@ -57,11 +65,11 @@ class Iface(object):
         """
         pass
 
-    async def verifyCertificate(self, ctx, request):
+    async def qrCodeLoginV2(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: VerifyCertificateRequest
+            request: QrCodeLoginV2Request
         """
         pass
 
@@ -87,8 +95,9 @@ class Client(Iface):
             'createSession': Method(self._createSession, middleware),
             'createQrCode': Method(self._createQrCode, middleware),
             'createPinCode': Method(self._createPinCode, middleware),
-            'qrCodeLogin': Method(self._qrCodeLogin, middleware),
             'verifyCertificate': Method(self._verifyCertificate, middleware),
+            'qrCodeLogin': Method(self._qrCodeLogin, middleware),
+            'qrCodeLoginV2': Method(self._qrCodeLoginV2, middleware),
         }
 
     async def createSession(self, ctx, request):
@@ -205,6 +214,44 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "createPinCode failed: unknown result")
 
+    async def verifyCertificate(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: VerifyCertificateRequest
+        """
+        return await self._methods['verifyCertificate']([ctx, request])
+
+    async def _verifyCertificate(self, ctx, request):
+        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
+        oprot = self._protocol_factory.get_protocol(memory_buffer)
+        oprot.write_request_headers(ctx)
+        oprot.writeMessageBegin('verifyCertificate', TMessageType.CALL, 0)
+        args = verifyCertificate_args()
+        args.request = request
+        args.write(oprot)
+        oprot.writeMessageEnd()
+        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
+
+        iprot = self._protocol_factory.get_protocol(response_transport)
+        iprot.read_response_headers(ctx)
+        _, mtype, _ = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
+                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
+            raise x
+        result = verifyCertificate_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.e is not None:
+            raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "verifyCertificate failed: unknown result")
+
     async def qrCodeLogin(self, ctx, request):
         """
         Args:
@@ -243,20 +290,20 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "qrCodeLogin failed: unknown result")
 
-    async def verifyCertificate(self, ctx, request):
+    async def qrCodeLoginV2(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: VerifyCertificateRequest
+            request: QrCodeLoginV2Request
         """
-        return await self._methods['verifyCertificate']([ctx, request])
+        return await self._methods['qrCodeLoginV2']([ctx, request])
 
-    async def _verifyCertificate(self, ctx, request):
+    async def _qrCodeLoginV2(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('verifyCertificate', TMessageType.CALL, 0)
-        args = verifyCertificate_args()
+        oprot.writeMessageBegin('qrCodeLoginV2', TMessageType.CALL, 0)
+        args = qrCodeLoginV2_args()
         args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
@@ -272,11 +319,15 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = verifyCertificate_result()
+        result = qrCodeLoginV2_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "qrCodeLoginV2 failed: unknown result")
+
 
 class Processor(FBaseProcessor):
 
@@ -294,8 +345,9 @@ class Processor(FBaseProcessor):
         self.add_to_processor_map('createSession', _createSession(Method(handler.createSession, middleware), self.get_write_lock()))
         self.add_to_processor_map('createQrCode', _createQrCode(Method(handler.createQrCode, middleware), self.get_write_lock()))
         self.add_to_processor_map('createPinCode', _createPinCode(Method(handler.createPinCode, middleware), self.get_write_lock()))
-        self.add_to_processor_map('qrCodeLogin', _qrCodeLogin(Method(handler.qrCodeLogin, middleware), self.get_write_lock()))
         self.add_to_processor_map('verifyCertificate', _verifyCertificate(Method(handler.verifyCertificate, middleware), self.get_write_lock()))
+        self.add_to_processor_map('qrCodeLogin', _qrCodeLogin(Method(handler.qrCodeLogin, middleware), self.get_write_lock()))
+        self.add_to_processor_map('qrCodeLoginV2', _qrCodeLoginV2(Method(handler.qrCodeLoginV2, middleware), self.get_write_lock()))
 
 
 class _createSession(FProcessorFunction):
@@ -418,6 +470,46 @@ class _createPinCode(FProcessorFunction):
                     raise e
 
 
+class _verifyCertificate(FProcessorFunction):
+
+    def __init__(self, handler, lock):
+        super(_verifyCertificate, self).__init__(handler, lock)
+
+    async def process(self, ctx, iprot, oprot):
+        args = verifyCertificate_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = verifyCertificate_result()
+        try:
+            ret = self._handler([ctx, args.request])
+            if inspect.iscoroutine(ret):
+                ret = await ret
+            result.success = ret
+        except TApplicationException as ex:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "verifyCertificate", exception=ex)
+                return
+        except SecondaryQrCodeException as e:
+            result.e = e
+        except Exception as e:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "verifyCertificate", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+            raise
+        async with self._lock:
+            try:
+                oprot.write_response_headers(ctx)
+                oprot.writeMessageBegin('verifyCertificate', TMessageType.REPLY, 0)
+                result.write(oprot)
+                oprot.writeMessageEnd()
+                oprot.get_transport().flush()
+            except TTransportException as e:
+                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
+                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
+                    raise _write_application_exception(ctx, oprot, "verifyCertificate", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                else:
+                    raise e
+
+
 class _qrCodeLogin(FProcessorFunction):
 
     def __init__(self, handler, lock):
@@ -458,41 +550,42 @@ class _qrCodeLogin(FProcessorFunction):
                     raise e
 
 
-class _verifyCertificate(FProcessorFunction):
+class _qrCodeLoginV2(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_verifyCertificate, self).__init__(handler, lock)
+        super(_qrCodeLoginV2, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = verifyCertificate_args()
+        args = qrCodeLoginV2_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = verifyCertificate_result()
+        result = qrCodeLoginV2_result()
         try:
             ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
+            result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "verifyCertificate", exception=ex)
+                _write_application_exception(ctx, oprot, "qrCodeLoginV2", exception=ex)
                 return
         except SecondaryQrCodeException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "verifyCertificate", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "qrCodeLoginV2", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('verifyCertificate', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('qrCodeLoginV2', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "verifyCertificate", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "qrCodeLoginV2", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
@@ -878,6 +971,129 @@ class createPinCode_result(object):
     def __ne__(self, other):
         return not (self == other)
 
+class verifyCertificate_args(object):
+    """
+    Attributes:
+     - request
+    """
+    def __init__(self, request=None):
+        self.request = request
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = VerifyCertificateRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('verifyCertificate_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.request))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class verifyCertificate_result(object):
+    """
+    Attributes:
+     - success
+     - e
+    """
+    def __init__(self, success=None, e=None):
+        self.success = success
+        self.e = e
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = VerifyCertificateResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
+                if ftype == TType.STRUCT:
+                    self.e = SecondaryQrCodeException()
+                    self.e.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('verifyCertificate_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        if self.e is not None:
+            oprot.writeFieldBegin('e', TType.STRUCT, 1)
+            self.e.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
+        value = (value * 31) ^ hash(make_hashable(self.e))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
 class qrCodeLogin_args(object):
     """
     Attributes:
@@ -1001,7 +1217,7 @@ class qrCodeLogin_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class verifyCertificate_args(object):
+class qrCodeLoginV2_args(object):
     """
     Attributes:
      - request
@@ -1017,7 +1233,7 @@ class verifyCertificate_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = VerifyCertificateRequest()
+                    self.request = QrCodeLoginV2Request()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -1029,7 +1245,7 @@ class verifyCertificate_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('verifyCertificate_args')
+        oprot.writeStructBegin('qrCodeLoginV2_args')
         if self.request is not None:
             oprot.writeFieldBegin('request', TType.STRUCT, 1)
             self.request.write(oprot)
@@ -1056,12 +1272,14 @@ class verifyCertificate_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class verifyCertificate_result(object):
+class qrCodeLoginV2_result(object):
     """
     Attributes:
+     - success
      - e
     """
-    def __init__(self, e=None):
+    def __init__(self, success=None, e=None):
+        self.success = success
         self.e = e
 
     def read(self, iprot):
@@ -1070,7 +1288,13 @@ class verifyCertificate_result(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = QrCodeLoginV2Response()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
                 if ftype == TType.STRUCT:
                     self.e = SecondaryQrCodeException()
                     self.e.read(iprot)
@@ -1084,7 +1308,11 @@ class verifyCertificate_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('verifyCertificate_result')
+        oprot.writeStructBegin('qrCodeLoginV2_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
         if self.e is not None:
             oprot.writeFieldBegin('e', TType.STRUCT, 1)
             self.e.write(oprot)
@@ -1097,6 +1325,7 @@ class verifyCertificate_result(object):
 
     def __hash__(self):
         value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
         value = (value * 31) ^ hash(make_hashable(self.e))
         return value
 

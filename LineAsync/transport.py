@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 import async_timeout, asyncio, aiohttp, httpx, inspect
 from aiohttp.client import ClientSession
 
@@ -27,7 +26,6 @@ class THttpClient(FHttpTransport):
         self.proxy_host, self.proxy_port = proxy_host, proxy_port
         if self.custom_request  == "aiohttp":
             self._url = url
-            pass
         else:
             parsed        = urllib.parse.urlparse(url)
             self.scheme = parsed.scheme
@@ -42,7 +40,7 @@ class THttpClient(FHttpTransport):
                 self.path += '?%s' % parsed.query
             self.__url = '%s://%s:%s%s' % (self.scheme, self.host, self.port, self.path)
             if self.custom_request  == "httplib2":
-                self.client   = Http(proxy_info=ProxyInfo(proxy_type = 3, proxy_host = self.proxy_host, proxy_port = self.proxy_port), timeout = self._timeout)
+                self.client   = Http(timeout = self._timeout, proxy_info=ProxyInfo(proxy_type = 3, proxy_host = self.proxy_host, proxy_port = self.proxy_port))
                 self.response = Response
             elif self.custom_request == "httpx":
                 self.client   = httpx.AsyncClient(base_url='%s://%s' % (self.scheme, self.host), http2 = True, timeout = self._timeout)
@@ -66,28 +64,30 @@ class THttpClient(FHttpTransport):
         data = await self._make_request(context, self._payload)
         if self.code == 400: 
             raise TTransportException(
-                type=400, 
-                message='Bad request: '+str(text) + ' :: '+ str(payload))
+                type = 400, 
+                message= f'Bad request: {data} :: {payload}'
+            )
         elif self.code == 403:
             raise TTransportException(
-                type=403, 
-                message='Forbidden: '+str(text))
+                type = 403, 
+                message= f'Request Forbidden: {data}'
+            )
         elif self.code == 404:
             raise TTransportException(
-                type=404,
-                message='Not Found: '+str(text))
+                type = 404,
+                message = f'Not Found: {data}'
+            )
         elif self.code == 410:
             pass
         elif self.code == 500:
             raise TTransportException(
-                type=500,
-                message='Backend Error: '+str(text))
-        elif self.code >= 300:
+                type = 500,
+                message = f'Backend Error: {data}'
+            )
+        elif self.code == 300:
             raise TTransportException(
-                type=TTransportExceptionType.UNKNOWN,
-                message='request errored with {0} and message {1}'.format(
-                    status, str(text)
-                )
+                type = TTransportExceptionType.UNKNOWN,
+                message = f'Request error with {self.code} and message {data}'
             )
         return TMemoryBuffer(self.response)
 
@@ -96,24 +96,51 @@ class THttpClient(FHttpTransport):
         conn = aiohttp.TCPConnector(use_dns_cache = True, loop = self._loop, limit = 0)
         self._headers.update({"Content-Length": str(len(payload))})
         async with sem:
-            try:
-                with async_timeout.timeout(self._timeout / 1000):
-                    if self.custom_request == "httpx":
-                        response = await self.client.request("POST", self.path, data = payload, headers = self._headers)
-                        if inspect.iscoroutine(response):
-                            self.response = await response.read()
-                        else:
-                            self.response = response.read()
-                        self.__set_response(response)
-                        return self.response
-                    elif self.custom_request == "httplib2":
-                        headers, self.response = self.client.request(self._url, "POST", body = payload, headers = self._headers)
-                        self.__set_response(headers)
-            except asyncio.TimeoutError:
-                raise TTransportException(
-                    type=TTransportExceptionType.TIMED_OUT,
-                    message='request timed out'
-                )
+            if self._timeout >= 5000:
+                try:
+                    async with async_timeout.timeout(self._timeout / 1000) as _client:
+                        _client.update(self._loop.time() + self._timeout /1000)
+                        if self.custom_request == "httpx":
+                            response = await self.client.request("POST", self.path, data = payload, headers = self._headers)
+                            if inspect.iscoroutine(response):
+                                self.response = await response.read()
+                            else:
+                                self.response = response.read()
+                            self.__set_response(response)
+                            return self.response
+                        elif self.custom_request == "httplib2":
+                            headers, self.response = self.client.request(self._url, "POST", body = payload, headers = self._headers)
+                            self.__set_response(headers)
+                        elif self.custom_request == "aiohttp":
+                            async with ClientSession(connector=conn) as session:
+                                async with session.post(self._url, data = payload, headers = self._headers) as response:
+                                    self.response = await response.content.read()
+                                    self.code = response.status
+                                    self.message = response.reason
+                                    self.headers = response.headers
+                except asyncio.TimeoutError:
+                    raise TTransportException(
+                        type = TTransportExceptionType.TIMED_OUT,
+                        message = 'request timeout'
+                    )
+            else:
+                if self.custom_request == "httpx":
+                    response = await self.client.request("POST", self.path, data = payload, headers = self._headers)
+                    if inspect.iscoroutine(response):
+                        self.response = await response.read()
+                    else:
+                        self.response = response.read()
+                    self.__set_response(response)
+                elif self.custom_request == "httplib2":
+                    headers, self.response = self.client.request(self._url, "POST", body = payload, headers = self._headers)
+                    self.__set_response(headers)
+                elif self.custom_request == "aiohttp":
+                    async with ClientSession(connector = conn) as session:
+                        async with session.post(self._url, data = payload, headers = self._headers) as response:
+                            self.response = await response.content.read()
+                            self.code = response.status
+                            self.message = response.reason
+                            self.headers = response.headers
 
     def __set_response(self, response):
         if self.custom_request == "gevent":

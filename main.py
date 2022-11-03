@@ -1,76 +1,38 @@
+#!usr/bin/python
 # -*- coding: utf-8 -*-
-from thrift.transport.TTransport import TMemoryBuffer
-from thrift.protocol.TCompactProtocol import TCompactProtocolAcceleratedFactory
-from LAsyncClient.transport import THttpClient
-from LineFrugal.CoinService import FCoinServiceClient
-from LineFrugal.CoinService.ttypes import *
-from frugal.provider import FServiceProvider
-from frugal.context import FContext
-from frugal.protocol import FProtocol
-
-class LegyProtocol(FProtocol):
-    # We dont need frugal default body header
-    def write_request_headers(self,*args,**kws):
-        pass
-    def write_response_headers(self,*args,**kws):
-        pass
-    def _write_headers(self, *args, **kws):
-        pass
-    def read_request_headers(self):
-        pass
-    def read_response_headers(self, *args, **kws):
-        pass
-
 import asyncio
+from LineAsync import *
 
-class LegyProtocolFactory(object):
-    def __init__(self, t_protocol_factory):
-        """
-        Args:
-            t_protocol_factory: Thrift TProtocolFactory.
-        """
-        self._t_protocol_factory = t_protocol_factory
+client = Client(
+    "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5OTI5MTk5MC02MjI4LTQ1MWQtOGU4OS1kYmUwMDMyZDg1ZGMiLCJhdWQiOiJMSU5FIiwiaWF0IjoxNjY3MDY0NDUxLCJleHAiOjE2Njc2NjkyNTEsInNjcCI6IkxJTkVfQ09SRSIsInJ0aWQiOiI3ZWVhZDlmZi03ODY1LTQwMDktYTdjZi03N2ZjMTIzMjg4MDgiLCJyZXhwIjoxNjk4NjAwNDUxLCJ2ZXIiOiIzLjEiLCJhaWQiOiJ1MjQwYWY4MzVlNGMwMTk5MWNlN2ViNjk0ZWE2NTJjOGYiLCJsc2lkIjoiZmMzNWEzOTQtMTUwYi00ZTZiLWEwYTMtMGZmNjlmNTJhNzgyIiwiZGlkIjoiTk9ORSIsImN0eXBlIjoiQU5EUk9JRFNFQ09OREFSWSIsImNtb2RlIjoiU0VDT05EQVJZIiwiY2lkIjoiMDkwMDAwMDAwMCJ9.3yT6I5aK2cA9y3YE9dMQ3tJXHoYIBcEwyeDyE_U4_Bc",
+    certificate = "32148f1f83cceff20f9629c0d000a16dc582cc42b01f6869facc01b78a17d93b",
+    appType = "ANDROIDSECONDARY"
+)
 
-    def get_protocol(self, transport):
-        return LegyProtocol(self._t_protocol_factory.getProtocol(transport))
+async def main(op):
+    try:
+        print(op.type, OpType._VALUES_TO_NAMES[op.type])
+    except TalkException as e:
+        print(f"an error occured:\n\t• Code: {e.code}\n\t• Reason: {e.reason}\n\t• paramaterMap: {e.parameterMap}")
 
-class Connection(object):
+async def run():
+    try:
+        while 1:
+            ops = await client.fetchOps(100)
+            if not ops:
+                return []
+            for op in ops:
+                if op.revision == -1 and op.param2 != None:
+                    client.globalRev = int(op.param2.split("\x1e")[0])
+                if op.revision == -1 and op.param1 != None:
+                    client.individualRev = int(op.param1.split("\x1e")[0])
+                client.setRevision(op.revision)
+                await main(op)
+    except KeyboardInterrupt:
+        sys.exit("Keyboard Interrupted.")
+    except Exception as e:
+        print(e)
 
-    def __init__(self):
-        self.context = FContext()
-        self.transport = THttpClient("https://ga2.line.naver.jp" + "/COIN4", request = "httpx")
-        self.protocol_factory = TCompactProtocolAcceleratedFactory()
-        self.wrapper_factory  = LegyProtocolFactory(self.protocol_factory)
-        self.service_provider = FServiceProvider(self.transport, self.wrapper_factory)
-        self.client = self.LiffClients()
-
-    def call(self, rfunc: str, *args, **kws) -> callable:
-        assert isinstance(rfunc, str), 'Function name must be str not '+type(rfunc).__name__
-        rfr = getattr(self.client, rfunc, None)
-        if rfr:
-            return rfr(self.context, *args, **kws)
-        else:
-            raise Exception(rfunc + ' is not exist')
-	
-    def LiffClients(self):
-        return FCoinServiceClient(self.service_provider)
-	
-
-c = Connection()
-c.transport.setCustomHeaders({
-    "X-Line-Access": "ua4d14b263eaaf5c3f8a28c23fbc648f5:aWF0OiAxNjM4ODM1NzA0MzEzCg==..KFKhajdqfVXUipKV3OHX6UQVWQk=",
-    "X-Line-Application": "IOS\t12.17.1\tiOS\t15.0",
-    "x-lal": "en_GB",
-    "User-Agent": "Line/12.17.1",
-})
-
-async def getTotalCoinBalance():
-    return await c.call("getTotalCoinBalance",
-        GetTotalCoinBalanceRequest(
-            2
-        )
-    )
-
-a = asyncio.get_event_loop()
-print(a.run_until_complete(getTotalCoinBalance()))
-print(c.transport.headers)
+if __name__ == "__main__":
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(run())

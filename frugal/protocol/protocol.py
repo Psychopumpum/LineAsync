@@ -69,24 +69,15 @@ class FProtocol(object):
         return self.trans
 
     @_state_reset_decorator
-    def write_request_headers(self, context):
-        """
-        Write the request headers to the underlying TTransport.
-        """
-
-        self._write_headers(context.get_request_headers())
+    def write_request_headers(self, *args, **kwargs):
+        pass
 
     @_state_reset_decorator
-    def write_response_headers(self, context):
-        """
-        Write the response headers to the underlying TTransport.
-        """
+    def write_response_headers(self, *args, **kwargs):
+        pass
 
-        self._write_headers(context.get_response_headers())
-
-    def _write_headers(self, headers):
-        buff = _Headers._write_to_bytearray(headers)
-        self.get_transport().write(buff)
+    def _write_headers(self, *args, **kwargs):
+        pass
 
     def read_request_headers(self):
         """
@@ -115,21 +106,7 @@ class FProtocol(object):
         return context
 
     def read_response_headers(self, context):
-        """
-        Read the response headers from the underlying transport
-        and set them on a given FContext.
-
-        Returns:
-            FContext
-        """
-        headers = _Headers._read(self.get_transport())
-
-        for key, value in headers.items():
-            # Don't want to overwrite the opid header we set for a propagated
-            # response
-            if key == _OPID_HEADER:
-                continue
-            context.set_response_header(key, value)
+        pass
 
     @_state_reset_decorator
     def writeMessageBegin(self, name, ttype, seqid):
