@@ -200,29 +200,39 @@ class Filters:
             m.command = []
             if m.text:
                 for i in _.p:
-                    if m.text.startswith(i) or m.text.startswith(f"{i} "):
-                        t = m.text.split(_.s)
-                        c, a = t[0][len(i):] if m.text.startswith(i) and not m.text.startswith(f"{i} ") else t[0][len(f"{i} "):], t[1:] if m.text.startswith(i) else t[2:]
-                        c = c if _.cs else c.lower()
-                        m.command = ([c] + a) if c in _.c else None
+                    if m.text:
+                        if m.text.startswith(i) or m.text.startswith(f"{i} "):
+                            t = m.text.split(_.s)
+                            c, a = t[0][len(i):] if m.text.startswith(i) and not m.text.startswith(f"{i} ") else t[0][len(f"{i} "):], t[1:] if m.text.startswith(i) else t[2:]
+                            c = c if _.cs else c.lower()
+                            m.command = ([c] + a) if c in _.c else None
             return bool(m.command)
         return create("Command", f, c = {commands if case_sensitive else commands.lower()} if not isinstance(commands, list) else {c if case_sensitive else c.lower() for c in commands}, p=set(prefix) if prefix else {""}, s=separator, cs=case_sensitive)
 
-        @staticmethod
-        def regex(pattern, flags: int = 0):
-            """Filter messages that match a given RegEx pattern
-            Args:
-                pattern (``str``):
-                    The RegEx pattern as string, it will be applied to the text of a message. When a pattern matches,
-                    all the `Match Objects <https://docs.python.org/3/library/re.html#match-objects>`
+    @staticmethod
+    def regex(pattern, flags: int = 0):
+        """Filter messages that match a given RegEx pattern
+        Args:
+            pattern (``str``):
+                The RegEx pattern as string, it will be applied to the text of a message. When a pattern matches,
+                all the `Match Objects <https://docs.python.org/3/library/re.html#match-objects>`
 
-                flags (``int``, *optional*):
-                    RegEx flags.
-            """
-            def f(_, m):
-                m.matches = [i for i in _.p.finditer(m.text or "")]
-                return bool(m.matches)
-            return create("Regex", f, p=re.compile(pattern, flags))
+            flags (``int``, *optional*):
+                RegEx flags.
+        """
+        def f(_, m):
+            tt = ""
+            for pp in Filters.prefix:
+                if m.text:
+                    if not m.text.startswith(pp):
+                        continue
+                    else:
+                        tt = m.text if m.text.startswith(f"{pp}") else ""
+                else:
+                    return False
+            m.matches = [i for i in _.p.finditer(tt or "")]
+            return bool(m.matches)
+        return create("Regex", f, p=re.compile(pattern, flags))
 
 class user(Filter, set):
     """
