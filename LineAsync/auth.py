@@ -55,7 +55,7 @@ class Auth(Server):
             "x-lpv": "1", "x-lac": "51010",
             "User-Agent": self.server.USER_AGENT,
             "X-Line-Application": self.server.APP_NAME,
-            "x-lap": "5", "Content-Type": "application/x-thrift; protocol=TCOMPACT",
+            "x-lap": "5", "Content-Type": "application/x-thrift",
             "x-lam": "w", "x-las": "F"
         })
 
@@ -67,6 +67,8 @@ class Auth(Server):
             request = "httpx"
         )
         login.transport.setCustomHeaders(self.server.talkHeaders)
+        if self.appType == "CHROMEOS":
+            login.transport.setCustomHeaders({ "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"})
         auth = await login.call("createSession", CreateQrSessionRequest())
         qrCode = await login.call("createQrCode", CreateQrCodeRequest(auth.authSessionId))
         verify = Connection(
@@ -79,6 +81,10 @@ class Auth(Server):
             "X-Line-Access": auth.authSessionId
         })
         verify.transport.setCustomHeaders(self.server.talkHeaders)
+        if self.appType == "CHROMEOS":
+            verify.transport.setCustomHeaders({
+                "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
+            })
         callback = f"{qrCode.callbackUrl}{self.server.generateSecret()}"
         print(f"CallbackURL: {callback}\nLongPollingMax: {qrCode.longPollingMaxCount}\nInterval: {qrCode.longPollingIntervalSec}")
         os.system(f"go run qrcode.go {callback}")
@@ -89,6 +95,7 @@ class Auth(Server):
                     auth.authSessionId
                 )
             )
+            print(f"{verifyQrCode} yooo")
         except TTransportException as e:
             if e.message == "request timeout":
                 sys.exit("Request has been timeout.")
@@ -102,27 +109,39 @@ class Auth(Server):
             except TTransportException as e:
                 if e.message == "request timeout":
                     sys.exit("Request has been timeout.")
-        try:
+        ''' try:
             result = await login.call("qrCodeLoginV2", QrCodeLoginV2Request(auth.authSessionId, "Psychopumpum", "BOTS", True))
             self.accessToken = result.tokenV3IssueResult.accessToken
         except Exception as e:
-            print(e)
-            result = await login.call("qrCodeLogin", QrCodeLoginRequest(auth.authSessionId, "Psychopumpum", True))
-            self.accessToken = result.accessToken
+            print(e)'''
+        result = await login.call("qrCodeLogin", QrCodeLoginRequest(auth.authSessionId, "Psychopumpum", True))
+        self.accessToken = result.accessToken
+        print(result)
         self.server.talkHeaders.update({
             "X-Line-Access": self.accessToken
         })
         self.certificate = result.certificate
+        print(self.accessToken)
+        print(self.certificate)
+        print(result)
         return self.loginWithAccessToken()
 
     def loginWithAccessToken(self):
         self.server.talkHeaders.update({
             "X-Line-Access": self.accessToken
         })
+        if self.appType == "CHROMEOS":
+            self.server.talkHeaders.update({
+                "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
+            })
         self.talk = Connection(self.server.TALK_SERVER_HOST + "/S4", FTalkServiceClient, 120000, request = "httpx")
         self.talk.transport.setCustomHeaders(self.server.talkHeaders)
         self.server.pollHeaders.update({
             "X-Line-Access": self.accessToken
         })
+        if self.appType == "CHROMEOS":
+            self.server.pollHeaders.update({
+                "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
+            })
         self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "httpx")
         self.poll.transport.setCustomHeaders(self.server.pollHeaders)

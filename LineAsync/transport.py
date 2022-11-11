@@ -45,7 +45,7 @@ class THttpClient(FHttpTransport):
             elif self.custom_request == "httpx":
                 self.client   = httpx.AsyncClient(base_url='%s://%s' % (self.scheme, self.host), http2 = True, timeout = self._timeout)
         self._url = url
-        self._loop = loop if loop else asyncio.get_event_loop()
+        self._loop = loop if loop else asyncio.new_event_loop()
         self._headers = {
             'Content-Type': 'application/x-thrift',
             'Accept': 'application/x-thrift',

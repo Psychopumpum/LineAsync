@@ -3,10 +3,10 @@ from .filters import Filter
 from .auth import Connection
 from types import LambdaType
 from frugal.context import FContext
-from LineFrugal.TalkService import FTalkServiceClient
+from LineFrugal.TalkService import FTalkServiceClient, ttypes
 import concurrent.futures
 
-import asyncio, traceback, inspect
+import asyncio, traceback, inspect, functools, signal, sys
 
 class OEPoll(Connection):
 
@@ -20,7 +20,7 @@ class OEPoll(Connection):
         self.revision      = -1
         self.globalRev     = 0
         self.individualRev = 0
-        self.loop          = loop if loop else asyncio.get_event_loop()
+        self.loop          = loop if loop else self.cl_._loop
         self.fetch_event   = asyncio.Event(loop=self.loop)
         self.plug_handler  = {}
 
@@ -30,11 +30,7 @@ class OEPoll(Connection):
     async def setRevision(self, rev):
         self.revision = max(self.revision, rev)
 
-    async def run(self):
-        #self.cl_._loop.run_until_complete(
-        self.cl_._loop.run_in_executor(None, await self.start())
-
-    def running(self):
+    def run(self):
         self.cl_._loop.run_until_complete(self.start())
 
     async def execute_handler(self, coro, *args, **kwgs):
@@ -44,12 +40,18 @@ class OEPoll(Connection):
             coros = coro(*args, **kwgs)
         return coros
 
+    def ask_exit(self, signame):
+        self.cl_._loop.stop()
+        sys.exit("got signal %s: exit" % signame)
+
     async def start(self, count: int = 100):
         while not self.fetch_event.is_set():
             try:
                 ops = await self.fetchOps(count)
             except KeyboardInterrupt:
-                raise
+                for signame in {'SIGINT', 'SIGTERM'}:
+                    self.cl_._loop.stop()
+                    sys.exit(f"Got signal {getattr(signal, signame)}: Exit")
             except EOFError:
                 pass
             except Exception:
@@ -62,6 +64,7 @@ class OEPoll(Connection):
                     self.globalRev = int(op.param2.split("\x1e")[0])
                 if op.revision == -1 and op.param1 != None:
                     self.individualRev = int(op.param1.split("\x1e")[0])
+                print(f"[ {op.type} ]", ttypes.OpType._VALUES_TO_NAMES[op.type].replace("_", " "))
                 if self.plug_handler:
                     for handler, funcs in self.plug_handler.items():
                         if handler == op.type:
@@ -76,6 +79,14 @@ class OEPoll(Connection):
                                                 await asyncio.wait([result])
                                     elif isinstance(func[k][0], LambdaType):
                                         if func[k][0](func[k][1], op if op.type not in [25, 26] else op.message):
-                                            await self.execute_handler(k, func[k][1], op if op.type not in [25, 26] else op.message)
+                                            with concurrent.futures.ThreadPoolExecutor(5) as pool:
+                                                result = await self.cl_._loop.run_in_executor(
+                                                    pool, self.execute_handler, k, func[k][1], op if op.type not in [25, 26] else op.message
+                                                )
+                                                await asyncio.wait([result])
                                     elif not func[k][0]:
-                                        await self.execute_handler(k, func[k][1], op)
+                                        with concurrent.futures.ThreadPoolExecutor(5) as pool:
+                                            result = await self.cl_._loop.run_in_executor(
+                                                pool, self.execute_handler, k, func[k][1], op
+                                            )
+                                            await asyncio.wait([result])

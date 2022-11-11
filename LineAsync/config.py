@@ -95,7 +95,7 @@ class Config(object):
         "ANDROIDSECONDARY" : "12.18.1",
         "IOS"              : "12.17.1",
         "IOSIPAD"          : "12.17.1",
-        "CHROMEOS_RC"      : "2.5.6",
+        "CHROMEOS"         : "2.5.7",
         "DESKTOPWIN"       : "7.12.0",
         "WATCHOS"          : "12.17.1",
         "WEAROS"           : "1.0.0",
@@ -109,7 +109,7 @@ class Config(object):
         "IOS"              : "iOS",
         "IOSIPAD"          : "iPadOS",
         "WATCHOS"          : "iOS",
-        "CHROMEOS_RC"      : "ChromeOS",
+        "CHROMEOS"         : "Chrome_OS",
         "DESKTOPWIN"       : "Windows OS",
         "DESKTOPMAC"       : "macOS",
         "WEAROS"           : "Android OS",
@@ -125,7 +125,7 @@ class Config(object):
         "DESKTOPWIN"       : "10",
         "DESKTOPMAC"       : "10.14",
         "WEAROS"           : "7.0",
-        "CHROMEOS_RC"      : "106.0",
+        "CHROMEOS"         : "1",
         "CHANNELCP"        : "15.2",
     }
 

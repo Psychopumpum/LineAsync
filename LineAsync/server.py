@@ -60,5 +60,5 @@ class Server(Config):
         privateKey = curve.generatePrivateKey(os.urandom(32))
         secret     = urllib.parse.quote(base64.b64encode(curve.generatePublicKey(privateKey)).decode())
         if email:
-            return f"{secret}"
+            return f"{secret.encode()}"
         return f"?secret={secret}&e2eeVersion=1"
