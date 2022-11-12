@@ -134,16 +134,17 @@ class Auth(Server):
             self.server.talkHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.talk = Connection(self.server.TALK_SERVER_HOST + "/S4", FTalkServiceClient, 120000, request = "httpx")
+        self.talk = Connection(self.server.TALK_SERVER_HOST + "/S4", FTalkServiceClient, 120000, request = "httplib2")
         self.talk.transport.setCustomHeaders(self.server.talkHeaders)
         self.server.pollHeaders.update({
-            "X-Line-Access": self.accessToken
+            "X-Line-Access": self.accessToken,
+            "Connection": "keep-alive"
         })
         if self.appType == "CHROMEOS":
             self.server.pollHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "aiohttp")
+        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "httpx")
         self.poll.transport.setCustomHeaders(self.server.pollHeaders)
         self.auth = Connection(self.server.TALK_SERVER_HOST + '/RS4', FAuthServiceClient, 4000, request = "httpx")
         self.auth.transport.setCustomHeaders(self.server.talkHeaders)

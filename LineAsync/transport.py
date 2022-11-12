@@ -1,4 +1,4 @@
-import async_timeout, asyncio, aiohttp, httpx, inspect
+import async_timeout, asyncio, aiohttp, httpx, inspect, traceback
 from aiohttp.client import ClientSession
 
 from thrift.transport.TTransport import TTransportBase
@@ -112,8 +112,8 @@ class THttpClient(FHttpTransport):
                             headers, self.response = self.client.request(self._url, "POST", body = payload, headers = self._headers)
                             self.__set_response(headers)
                         elif self.custom_request == "aiohttp":
-                            async with ClientSession(connector=conn) as session:
-                                async with session.post(self._url, data = payload, headers = self._headers) as response:
+                            async with ClientSession() as client:
+                                async with client.post(self._url, data = payload, headers = self._headers) as response:
                                     self.response = await response.content.read()
                                     self.code = response.status
                                     self.message = response.reason
@@ -135,12 +135,15 @@ class THttpClient(FHttpTransport):
                     headers, self.response = self.client.request(self._url, "POST", body = payload, headers = self._headers)
                     self.__set_response(headers)
                 elif self.custom_request == "aiohttp":
-                    async with ClientSession(connector = conn) as session:
-                        async with session.post(self._url, data = payload, headers = self._headers) as response:
-                            self.response = await response.content.read()
-                            self.code = response.status
-                            self.message = response.reason
-                            self.headers = response.headers
+                    try:
+                        async with ClientSession(connector = conn) as session:
+                            async with session.post(self._url, data = payload, headers = self._headers) as response:
+                                self.response = await response.content.read()
+                                self.code = response.status
+                                self.message = response.reason
+                                self.headers = response.headers
+                    except Exception:
+                        traceback.print_exc()
 
     def __set_response(self, response):
         if self.custom_request == "gevent":
