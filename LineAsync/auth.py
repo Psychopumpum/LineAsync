@@ -16,8 +16,10 @@ from LineFrugal.SecondaryService import (
 )
 
 from LineFrugal.TalkService import FTalkServiceClient
+from LineFrugal.AuthService import FAuthServiceClient
+from LineFrugal.AuthService.ttypes import *
 
-import sys, os
+import sys, os, rsa
 
 class Connection(object):
 
@@ -95,7 +97,6 @@ class Auth(Server):
                     auth.authSessionId
                 )
             )
-            print(f"{verifyQrCode} yooo")
         except TTransportException as e:
             if e.message == "request timeout":
                 sys.exit("Request has been timeout.")
@@ -109,14 +110,13 @@ class Auth(Server):
             except TTransportException as e:
                 if e.message == "request timeout":
                     sys.exit("Request has been timeout.")
-        ''' try:
+        try:
             result = await login.call("qrCodeLoginV2", QrCodeLoginV2Request(auth.authSessionId, "Psychopumpum", "BOTS", True))
             self.accessToken = result.tokenV3IssueResult.accessToken
         except Exception as e:
-            print(e)'''
-        result = await login.call("qrCodeLogin", QrCodeLoginRequest(auth.authSessionId, "Psychopumpum", True))
-        self.accessToken = result.accessToken
-        print(result)
+            print(e)
+            result = await login.call("qrCodeLogin", QrCodeLoginRequest(auth.authSessionId, "Psychopumpum", True))
+            self.accessToken = result.accessToken
         self.server.talkHeaders.update({
             "X-Line-Access": self.accessToken
         })
@@ -143,5 +143,7 @@ class Auth(Server):
             self.server.pollHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "httpx")
+        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "aiohttp")
         self.poll.transport.setCustomHeaders(self.server.pollHeaders)
+        self.auth = Connection(self.server.TALK_SERVER_HOST + '/RS4', FAuthServiceClient, 4000, request = "httpx")
+        self.auth.transport.setCustomHeaders(self.server.talkHeaders)

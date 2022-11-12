@@ -31,6 +31,7 @@ class Client(Auth, Talk, Methods, BaseClient):
         self.clientMid     = kwargs.pop('clientMid', None)
         self.clientType    = kwargs.pop('clientType', None)
         self.proxy_host    = kwargs.pop("host", None)
+        self.loginType     = kwargs.pop("loginType", 0)
         self.proxy_port    = kwargs.pop("port", None)
         self.timeout       = kwargs.pop("timeout", None)
         self._loop         = kwargs.pop("loop", asyncio.get_event_loop())
@@ -45,7 +46,9 @@ class Client(Auth, Talk, Methods, BaseClient):
         if not self.appType and not self.appName:
             self.appType = "IOSIPAD"
         if idOrAccessToken and passwd:
-            self.loginWithCredential(idOrAccessToken, passwd)
+            self._loop.run_until_complete(
+                self.loginWithCredential(idOrAccessToken, passwd)
+            )
         elif idOrAccessToken and not passwd:
             try:
                 self.accessToken = idOrAccessToken

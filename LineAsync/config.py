@@ -1,4 +1,4 @@
-
+import re
 
 class Config(object):
 
@@ -131,6 +131,7 @@ class Config(object):
 
     CARRIER      = '51010,0-19'
     IP_ADDR      = '8.8.8.8'
+    EMAIL_REGEX = re.compile(r"[^@]+@[^@]+\.[^@]+")
 
     def __init__(self, appType=None, secondary=False):
         if appType:

@@ -50,11 +50,24 @@ class Server(Config):
 
     async def request(self, method: str, url, *args, **kwargs):
         method = method.upper()
-        if method == "GET":return self._session.get(url, *args, **kwargs)
-        elif method == "POST":return self._session.post(url, *args, **kwargs)
-        elif method == "PUT":return self._session.put(url, *args, **kwargs)
-        elif method == "HEAD":return self._session.head(url, *args, **kwargs)
-        elif method == "DELETE":return self._session.delete(url, *args, **kwargs)
+        result = {}
+        async with self._session as client:
+            if method == "GET":
+                response = await client.get(url, *args, timeout = None, **kwargs)
+            elif method == "POST":
+                response = await client.post(url, *args, **kwargs)
+            elif method == "PUT":
+                response = await client.put(url, *args, **kwargs)
+            elif method == "HEAD":
+                response = await client.head(url, *args, **kwargs)
+            elif method == "DELETE":
+                response = await client.delete(url, *args, timeout = None, **kwargs)
+            result.update({
+                'code': response.status_code,
+                'text': response.text,
+                'json': response.json()
+            })
+            return result
 
     def generateSecret(self, email = False):
         privateKey = curve.generatePrivateKey(os.urandom(32))
