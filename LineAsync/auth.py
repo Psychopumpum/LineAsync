@@ -126,6 +126,99 @@ class Auth(Server):
         print(result)
         return self.loginWithAccessToken()
 
+    async def loginWithCredential(self, email, passwd):
+        if self.appType:
+            if not self.systemName:
+                self.systemName = self.server.SYSTEM_NAME[self.appType]
+            else:
+                self.systemName = self.systemName
+        else:
+            self.systemName = "Psychopumpum"
+        if self.server.EMAIL_REGEX.match(email):
+            self.provider = IdentityProvider.LINE
+        else:
+            self.provider = IdentityProvider.NAVER_KR
+        tauth = Connection(
+            "https://ga2.line.naver.jp/api/v4/TalkService.do",
+            FAuthServiceClient,
+            60000,
+            request = "httpx"
+        )
+        tauth.transport.setCustomHeaders(self.server.talkHeaders)
+        rsaKey  = await tauth.call('getRSAKeyInfo', self.provider)
+        message = f"{chr(len(rsaKey.sessionKey))}{rsaKey.sessionKey}{chr(len(email))}{email}{chr(len(passwd))}{passwd}".encode("utf-8")
+        pub_key = rsa.PublicKey(int(rsaKey.nvalue, 16), int(rsaKey.evalue, 16))
+        crypto  = rsa.encrypt(message, pub_key).hex()
+        auth = Connection(
+            "https://ga2.line.naver.jp/api/v4p/rs",
+            FAuthServiceClient,
+            60000,
+            request = "httpx"
+        )
+        auth.transport.setCustomHeaders(self.server.talkHeaders)
+        lReq = self.__loginRequest(0, {
+            'identityProvider': self.provider,
+            'identifier': rsaKey.keynm,
+            'password': crypto,
+            'keepLoggedIn': self.keepLoggedIn,
+            'systemName': self.systemName,
+            'certificate': self.certificate,
+            'e2eeVersion': 0
+        })
+        try:
+            result = await auth.call('loginV2', lReq)
+        except TalkException as e:
+            result = await auth.call('loginZ', lReq)
+        if result.type == LoginResultType.REQUIRE_DEVICE_CONFIRM:
+            print(f"Pincode: {result.pinCode}")
+            self.server.setHeaders('X-Line-Access', result.verifier)
+            getAccessKey = await self.server.request('GET', self.server.TALK_SERVER_HOST_SECONDARY + "/Q", headers = self.server.talkHeaders)
+            getAccessKey = getAccessKey["json"]
+            lReq = self.__loginRequest(1, {
+                'keepLoggedIn': self.keepLoggedIn,
+                'verifier': getAccessKey['result']['verifier'],
+                'e2eeVersion': 0,
+                'systemName': self.systemName,
+                'modelName': 'iPadOS'
+            })
+            try:
+                result = await auth.call('loginV2', lReq)
+            except TalkException as e:
+                result = await auth.call('loginZ', lReq)
+        self.accessToken, self.certificate = result.authToken, result.certificate
+        return self.loginWithAccessToken(self.accessToken)
+
+    def __loginRequest(self, type, data):
+        lReq = LoginRequest()
+        if type == 0:
+            lReq.type             = 0
+            lReq.identityProvider = data['identityProvider']
+            lReq.identifier       = data['identifier']
+            lReq.password         = data['password']
+            lReq.keepLoggedIn     = data['keepLoggedIn']
+            lReq.systemName       = data['systemName']
+            lReq.certificate      = data['certificate']
+            lReq.e2eeVersion      = data['e2eeVersion']
+        elif type == 1:
+            lReq.type             = 1
+            lReq.keepLoggedIn     = data.get('keepLoggedIn')
+            lReq.identityProvider = data.get('identityProvider')
+            lReq.accessLocation   = data.get('accessLocation')
+            lReq.systemName       = data.get('systemName')
+            lReq.verifier         = data.get('verifier')
+            lReq.e2eeVersion      = data.get('e2eeVersion')
+        elif type == 2:
+            lReq.type             = 2
+            lReq.identityProvider = data['identityProvider']
+            lReq.identifier       = data['identifier']
+            lReq.password         = data['password']
+            lReq.keepLoggedIn     = data['keepLoggedIn']
+            lReq.systemName       = data['systemName']
+            lReq.certificate      = data['certificate']
+            lReq.secret           = data['secret']
+            lReq.e2eeVersion      = data['e2eeVersion']
+        return lReq
+
     def loginWithAccessToken(self):
         self.server.talkHeaders.update({
             "X-Line-Access": self.accessToken
@@ -144,7 +237,7 @@ class Auth(Server):
             self.server.pollHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "httpx")
+        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "aiohttp")
         self.poll.transport.setCustomHeaders(self.server.pollHeaders)
         self.auth = Connection(self.server.TALK_SERVER_HOST + '/RS4', FAuthServiceClient, 4000, request = "httpx")
         self.auth.transport.setCustomHeaders(self.server.talkHeaders)

@@ -5,7 +5,12 @@ from LineAsync import *
 from LineFrugal.AuthService.ttypes import *
 import rsa, binascii
 
-client = Client("ua4d14b263eaaf5c3f8a28c23fbc648f5:aWF0OiAxNjM4ODM1NzA0MzEzCg==..KFKhajdqfVXUipKV3OHX6UQVWQk=", appType = "ANDROID")
+#client = Client("ua4d14b263eaaf5c3f8a28c23fbc648f5:aWF0OiAxNjM4ODM1NzA0MzEzCg==..KFKhajdqfVXUipKV3OHX6UQVWQk=", appType = "ANDROID")
+client = Client(
+    "rhyn.ml@gmail.com",
+    "25june",
+    appType = "IOSIPAD"
+)
 """
     "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJqdGkiOiI5OTI5MTk5MC02MjI4LTQ1MWQtOGU4OS1kYmUwMDMyZDg1ZGMiLCJhdWQiOiJMSU5FIiwiaWF0IjoxNjY3MDY0NDUxLCJleHAiOjE2Njc2NjkyNTEsInNjcCI6IkxJTkVfQ09SRSIsInJ0aWQiOiI3ZWVhZDlmZi03ODY1LTQwMDktYTdjZi03N2ZjMTIzMjg4MDgiLCJyZXhwIjoxNjk4NjAwNDUxLCJ2ZXIiOiIzLjEiLCJhaWQiOiJ1MjQwYWY4MzVlNGMwMTk5MWNlN2ViNjk0ZWE2NTJjOGYiLCJsc2lkIjoiZmMzNWEzOTQtMTUwYi00ZTZiLWEwYTMtMGZmNjlmNTJhNzgyIiwiZGlkIjoiTk9ORSIsImN0eXBlIjoiQU5EUk9JRFNFQ09OREFSWSIsImNtb2RlIjoiU0VDT05EQVJZIiwiY2lkIjoiMDkwMDAwMDAwMCJ9.3yT6I5aK2cA9y3YE9dMQ3tJXHoYIBcEwyeDyE_U4_Bc",
     certificate = "32148f1f83cceff20f9629c0d000a16dc582cc42b01f6869facc01b78a17d93b",
@@ -35,7 +40,7 @@ async def run():
         sys.exit("Keyboard Interrupted.")
     except Exception as e:
         print(e)"""
-
+'''
 async def main():
     ses = await client.auth.call("openAuthSession", AuthSessionRequest())
     rsaInfo = await client.auth.call("getAuthRSAKey", ses, 1)
@@ -63,4 +68,4 @@ async def main():
 
 if __name__ == "__main__":
     loop = asyncio.new_event_loop()
-    loop.run_until_complete(main())
+    loop.run_until_complete(main())'''

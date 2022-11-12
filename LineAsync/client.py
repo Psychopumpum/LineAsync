@@ -46,6 +46,7 @@ class Client(Auth, Talk, Methods, BaseClient):
         if not self.appType and not self.appName:
             self.appType = "IOSIPAD"
         if idOrAccessToken and passwd:
+            raise Exception("For now login with email is error.")
             self._loop.run_until_complete(
                 self.loginWithCredential(idOrAccessToken, passwd)
             )

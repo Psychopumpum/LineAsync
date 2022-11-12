@@ -96,7 +96,23 @@ def create(name: str, func: callable, **kwargs) -> type:
     d = {"__call__": func}
     d.update(kwargs)
     return type(name, (Filter,), d)()
-	
+
+def byte2int(t):
+    e = 0
+    i = 0
+    s = len(t)
+    for i in range(s):
+        e = 256 * e + t[i]
+    return e
+
+
+def bin2bytes(k):
+    e = []
+    for i in range(int(len(k) / 2)):
+        _i = int(k[i * 2:i * 2 + 2], 16)
+        e.append(_i)
+    return bytearray(e)
+
 class Filters:
 
     create = create
@@ -206,6 +222,13 @@ class Filters:
                             c, a = t[0][len(i):] if m.text.startswith(i) and not m.text.startswith(f"{i} ") else t[0][len(f"{i} "):], t[1:] if m.text.startswith(i) else t[2:]
                             c = c if _.cs else c.lower()
                             m.command = ([c] + a) if c in _.c else None
+            elif not m.text and m.contentMetadata.get('e2eeVersion') == '2' and m.chunks:
+                chunks = m.chunks
+                for i in range(len(chunks)):
+                    if isinstance(chunks[i], str):
+                        chunks[i] = chunks[i].encode()
+                senderKeyId = byte2int(chunks[3])
+                receiverKeyId = byte2int(chunks[4])
             return bool(m.command)
         return create("Command", f, c = {commands if case_sensitive else commands.lower()} if not isinstance(commands, list) else {c if case_sensitive else c.lower() for c in commands}, p=set(prefix) if prefix else {""}, s=separator, cs=case_sensitive)
 
