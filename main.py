@@ -2,13 +2,11 @@
 # -*- coding: utf-8 -*-
 import asyncio
 from LineAsync import *
-from LineFrugal.AuthService.ttypes import *
+from LineFrugal.ttypes import *
 import rsa, binascii
 
 #client = Client("ua4d14b263eaaf5c3f8a28c23fbc648f5:aWF0OiAxNjM4ODM1NzA0MzEzCg==..KFKhajdqfVXUipKV3OHX6UQVWQk=", appType = "ANDROID")
 client = Client(
-    "rhyn.ml@gmail.com",
-    "25june",
     appType = "IOSIPAD"
 )
 """
