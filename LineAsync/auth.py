@@ -34,7 +34,7 @@ class Connection(object):
         assert isinstance(rfunc, str), f"Function name must be str and not {type(rfunc).__name__}"
         rfr = getattr(self._client, rfunc, None)
         if rfr:
-            return await asyncio.create_task(rfr(self.ctx, *arg, **kws))
+            return await rfr(self.ctx, *arg, **kws)
         raise Exception("Function name is not defined.")
 
 class Auth(Server):

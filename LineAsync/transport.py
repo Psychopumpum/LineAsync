@@ -1,7 +1,7 @@
 from gevent import monkey
 monkey.patch_all()
 
-import async_timeout, asyncio, aiohttp, httpx, inspect, traceback
+import async_timeout, asyncio, aiohttp, httpx, inspect, traceback, sys
 from aiohttp.client import ClientSession
 
 from thrift.transport.TTransport import TTransportBase
@@ -67,8 +67,7 @@ class THttpClient(FHttpTransport):
         self._preflight_request_check(payload)
         with concurrent.futures.ThreadPoolExecutor() as pool:
             loop = asyncio.get_event_loop()
-            data = await loop.create_task( self._make_request(context, self._payload))
-            print(type(data))
+            data = await loop.create_task(self._make_request(context, self._payload))
         if self.code == 400: 
             raise TTransportException(
                 type = 400, 

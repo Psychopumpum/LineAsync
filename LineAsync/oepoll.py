@@ -21,11 +21,23 @@ class OEPoll(Connection):
         self.globalRev     = 0
         self.individualRev = 0
         self.loop          = loop if loop else self.cl_._loop
-        self.fetch_event   = asyncio.Event(loop=self.loop)
+        self.fetch_event   = asyncio.Event()
         self.plug_handler  = {}
 
-    async def fetchOps(self, count: int):
+    async def _fetchOps(self, count: int):
         return await self.call("fetchOps", self.revision, count, self.globalRev, self.individualRev)
+
+    async def fetchOps(self, count: int):
+        try:
+            ops = await self._fetchOps(count)
+        except KeyboardInterrupt:
+            sys.exit("Keyboard Interrupted.")
+        except EOFError:
+            return []
+        except Exception:
+            traceback.print_exc()
+        if not ops:return []
+        return ops
 
     async def setRevision(self, rev):
         self.revision = max(self.revision, rev)
@@ -47,7 +59,7 @@ class OEPoll(Connection):
     async def start(self, count: int = 100):
         while not self.fetch_event.is_set():
             try:
-                ops = await self.fetchOps(count)
+                ops = await self._fetchOps(count)
             except KeyboardInterrupt:
                 for signame in {'SIGINT', 'SIGTERM'}:
                     self.cl_._loop.stop()
