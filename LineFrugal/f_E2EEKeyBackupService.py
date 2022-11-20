@@ -25,42 +25,43 @@ from .ttypes import *
 
 class Iface(object):
 
-    async def getGroupCall(self, ctx, chatMid):
+    async def getE2EEKeyBackupCertificates(self, ctx, request):
         """
         Args:
             ctx: FContext
-            chatMid: string
+            request: GetE2EEKeyBackupCertificatesRequest
         """
         pass
 
-    async def inviteIntoGroupCall(self, ctx, chatMid, memberMids, mediaType):
+    async def restoreE2EEKeyBackup(self, ctx, request):
         """
         Args:
             ctx: FContext
-            chatMid: string
-            memberMids: list of string
-            mediaType: MediaType
+            request: RestoreE2EEKeyBackupRequest
         """
         pass
 
-    async def acquireCallRoute(self, ctx, to, callType, fromEnvInfo):
+    async def getE2EEKeyBackupInfo(self, ctx, request):
         """
         Args:
             ctx: FContext
-            to: string
-            callType: CallType
-            fromEnvInfo: dict of <string, string>
+            request: GetE2EEKeyBackupInfoRequest
         """
         pass
 
-    async def acquireGroupCallRoute(self, ctx, chatMid, mediaType, isInitialHost, capabilities):
+    async def deleteE2EEKeyBackup(self, ctx, request):
         """
         Args:
             ctx: FContext
-            chatMid: string
-            mediaType: MediaType
-            isInitialHost: boolean
-            capabilities: list of string
+            request: DeleteE2EEKeyBackupRequest
+        """
+        pass
+
+    async def createE2EEKeyBackupEnforced(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: CreateE2EEKeyBackupRequest
         """
         pass
 
@@ -83,27 +84,28 @@ class Client(Iface):
         self._protocol_factory = provider.get_protocol_factory()
         middleware += provider.get_middleware()
         self._methods = {
-            'getGroupCall': Method(self._getGroupCall, middleware),
-            'inviteIntoGroupCall': Method(self._inviteIntoGroupCall, middleware),
-            'acquireCallRoute': Method(self._acquireCallRoute, middleware),
-            'acquireGroupCallRoute': Method(self._acquireGroupCallRoute, middleware),
+            'getE2EEKeyBackupCertificates': Method(self._getE2EEKeyBackupCertificates, middleware),
+            'restoreE2EEKeyBackup': Method(self._restoreE2EEKeyBackup, middleware),
+            'getE2EEKeyBackupInfo': Method(self._getE2EEKeyBackupInfo, middleware),
+            'deleteE2EEKeyBackup': Method(self._deleteE2EEKeyBackup, middleware),
+            'createE2EEKeyBackupEnforced': Method(self._createE2EEKeyBackupEnforced, middleware),
         }
 
-    async def getGroupCall(self, ctx, chatMid):
+    async def getE2EEKeyBackupCertificates(self, ctx, request):
         """
         Args:
             ctx: FContext
-            chatMid: string
+            request: GetE2EEKeyBackupCertificatesRequest
         """
-        return await self._methods['getGroupCall']([ctx, chatMid])
+        return await self._methods['getE2EEKeyBackupCertificates']([ctx, request])
 
-    async def _getGroupCall(self, ctx, chatMid):
+    async def _getE2EEKeyBackupCertificates(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('getGroupCall', TMessageType.CALL, 0)
-        args = getGroupCall_args()
-        args.chatMid = chatMid
+        oprot.writeMessageBegin('getE2EEKeyBackupCertificates', TMessageType.CALL, 0)
+        args = getE2EEKeyBackupCertificates_args()
+        args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
         response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
@@ -118,34 +120,30 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = getGroupCall_result()
+        result = getE2EEKeyBackupCertificates_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getGroupCall failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getE2EEKeyBackupCertificates failed: unknown result")
 
-    async def inviteIntoGroupCall(self, ctx, chatMid, memberMids, mediaType):
+    async def restoreE2EEKeyBackup(self, ctx, request):
         """
         Args:
             ctx: FContext
-            chatMid: string
-            memberMids: list of string
-            mediaType: MediaType
+            request: RestoreE2EEKeyBackupRequest
         """
-        return await self._methods['inviteIntoGroupCall']([ctx, chatMid, memberMids, mediaType])
+        return await self._methods['restoreE2EEKeyBackup']([ctx, request])
 
-    async def _inviteIntoGroupCall(self, ctx, chatMid, memberMids, mediaType):
+    async def _restoreE2EEKeyBackup(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('inviteIntoGroupCall', TMessageType.CALL, 0)
-        args = inviteIntoGroupCall_args()
-        args.chatMid = chatMid
-        args.memberMids = memberMids
-        args.mediaType = mediaType
+        oprot.writeMessageBegin('restoreE2EEKeyBackup', TMessageType.CALL, 0)
+        args = restoreE2EEKeyBackup_args()
+        args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
         response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
@@ -160,74 +158,30 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = inviteIntoGroupCall_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.e is not None:
-            raise result.e
-    async def acquireCallRoute(self, ctx, to, callType, fromEnvInfo):
-        """
-        Args:
-            ctx: FContext
-            to: string
-            callType: CallType
-            fromEnvInfo: dict of <string, string>
-        """
-        return await self._methods['acquireCallRoute']([ctx, to, callType, fromEnvInfo])
-
-    async def _acquireCallRoute(self, ctx, to, callType, fromEnvInfo):
-        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
-        oprot = self._protocol_factory.get_protocol(memory_buffer)
-        oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('acquireCallRoute', TMessageType.CALL, 0)
-        args = acquireCallRoute_args()
-        args.to = to
-        args.callType = callType
-        args.fromEnvInfo = fromEnvInfo
-        args.write(oprot)
-        oprot.writeMessageEnd()
-        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
-
-        iprot = self._protocol_factory.get_protocol(response_transport)
-        iprot.read_response_headers(ctx)
-        _, mtype, _ = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
-                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
-            raise x
-        result = acquireCallRoute_result()
+        result = restoreE2EEKeyBackup_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "acquireCallRoute failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "restoreE2EEKeyBackup failed: unknown result")
 
-    async def acquireGroupCallRoute(self, ctx, chatMid, mediaType, isInitialHost, capabilities):
+    async def getE2EEKeyBackupInfo(self, ctx, request):
         """
         Args:
             ctx: FContext
-            chatMid: string
-            mediaType: MediaType
-            isInitialHost: boolean
-            capabilities: list of string
+            request: GetE2EEKeyBackupInfoRequest
         """
-        return await self._methods['acquireGroupCallRoute']([ctx, chatMid, mediaType, isInitialHost, capabilities])
+        return await self._methods['getE2EEKeyBackupInfo']([ctx, request])
 
-    async def _acquireGroupCallRoute(self, ctx, chatMid, mediaType, isInitialHost, capabilities):
+    async def _getE2EEKeyBackupInfo(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('acquireGroupCallRoute', TMessageType.CALL, 0)
-        args = acquireGroupCallRoute_args()
-        args.chatMid = chatMid
-        args.mediaType = mediaType
-        args.isInitialHost = isInitialHost
-        args.capabilities = capabilities
+        oprot.writeMessageBegin('getE2EEKeyBackupInfo', TMessageType.CALL, 0)
+        args = getE2EEKeyBackupInfo_args()
+        args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
         response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
@@ -242,14 +196,90 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = acquireGroupCallRoute_result()
+        result = getE2EEKeyBackupInfo_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "acquireGroupCallRoute failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getE2EEKeyBackupInfo failed: unknown result")
+
+    async def deleteE2EEKeyBackup(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: DeleteE2EEKeyBackupRequest
+        """
+        return await self._methods['deleteE2EEKeyBackup']([ctx, request])
+
+    async def _deleteE2EEKeyBackup(self, ctx, request):
+        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
+        oprot = self._protocol_factory.get_protocol(memory_buffer)
+        oprot.write_request_headers(ctx)
+        oprot.writeMessageBegin('deleteE2EEKeyBackup', TMessageType.CALL, 0)
+        args = deleteE2EEKeyBackup_args()
+        args.request = request
+        args.write(oprot)
+        oprot.writeMessageEnd()
+        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
+
+        iprot = self._protocol_factory.get_protocol(response_transport)
+        iprot.read_response_headers(ctx)
+        _, mtype, _ = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
+                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
+            raise x
+        result = deleteE2EEKeyBackup_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.e is not None:
+            raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "deleteE2EEKeyBackup failed: unknown result")
+
+    async def createE2EEKeyBackupEnforced(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: CreateE2EEKeyBackupRequest
+        """
+        return await self._methods['createE2EEKeyBackupEnforced']([ctx, request])
+
+    async def _createE2EEKeyBackupEnforced(self, ctx, request):
+        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
+        oprot = self._protocol_factory.get_protocol(memory_buffer)
+        oprot.write_request_headers(ctx)
+        oprot.writeMessageBegin('createE2EEKeyBackupEnforced', TMessageType.CALL, 0)
+        args = createE2EEKeyBackupEnforced_args()
+        args.request = request
+        args.write(oprot)
+        oprot.writeMessageEnd()
+        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
+
+        iprot = self._protocol_factory.get_protocol(response_transport)
+        iprot.read_response_headers(ctx)
+        _, mtype, _ = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
+                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
+            raise x
+        result = createE2EEKeyBackupEnforced_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.e is not None:
+            raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "createE2EEKeyBackupEnforced failed: unknown result")
 
 
 class Processor(FBaseProcessor):
@@ -265,167 +295,209 @@ class Processor(FBaseProcessor):
             middleware = [middleware]
 
         super(Processor, self).__init__()
-        self.add_to_processor_map('getGroupCall', _getGroupCall(Method(handler.getGroupCall, middleware), self.get_write_lock()))
-        self.add_to_processor_map('inviteIntoGroupCall', _inviteIntoGroupCall(Method(handler.inviteIntoGroupCall, middleware), self.get_write_lock()))
-        self.add_to_processor_map('acquireCallRoute', _acquireCallRoute(Method(handler.acquireCallRoute, middleware), self.get_write_lock()))
-        self.add_to_processor_map('acquireGroupCallRoute', _acquireGroupCallRoute(Method(handler.acquireGroupCallRoute, middleware), self.get_write_lock()))
+        self.add_to_processor_map('getE2EEKeyBackupCertificates', _getE2EEKeyBackupCertificates(Method(handler.getE2EEKeyBackupCertificates, middleware), self.get_write_lock()))
+        self.add_to_processor_map('restoreE2EEKeyBackup', _restoreE2EEKeyBackup(Method(handler.restoreE2EEKeyBackup, middleware), self.get_write_lock()))
+        self.add_to_processor_map('getE2EEKeyBackupInfo', _getE2EEKeyBackupInfo(Method(handler.getE2EEKeyBackupInfo, middleware), self.get_write_lock()))
+        self.add_to_processor_map('deleteE2EEKeyBackup', _deleteE2EEKeyBackup(Method(handler.deleteE2EEKeyBackup, middleware), self.get_write_lock()))
+        self.add_to_processor_map('createE2EEKeyBackupEnforced', _createE2EEKeyBackupEnforced(Method(handler.createE2EEKeyBackupEnforced, middleware), self.get_write_lock()))
 
 
-class _getGroupCall(FProcessorFunction):
+class _getE2EEKeyBackupCertificates(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_getGroupCall, self).__init__(handler, lock)
+        super(_getE2EEKeyBackupCertificates, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = getGroupCall_args()
+        args = getE2EEKeyBackupCertificates_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = getGroupCall_result()
+        result = getE2EEKeyBackupCertificates_result()
         try:
-            ret = self._handler([ctx, args.chatMid])
+            ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getGroupCall", exception=ex)
+                _write_application_exception(ctx, oprot, "getE2EEKeyBackupCertificates", exception=ex)
                 return
-        except TalkException as e:
+        except E2EEKeyBackupException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getGroupCall", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "getE2EEKeyBackupCertificates", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('getGroupCall', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('getE2EEKeyBackupCertificates', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "getGroupCall", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "getE2EEKeyBackupCertificates", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
 
-class _inviteIntoGroupCall(FProcessorFunction):
+class _restoreE2EEKeyBackup(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_inviteIntoGroupCall, self).__init__(handler, lock)
+        super(_restoreE2EEKeyBackup, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = inviteIntoGroupCall_args()
+        args = restoreE2EEKeyBackup_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = inviteIntoGroupCall_result()
+        result = restoreE2EEKeyBackup_result()
         try:
-            ret = self._handler([ctx, args.chatMid, args.memberMids, args.mediaType])
-            if inspect.iscoroutine(ret):
-                ret = await ret
-        except TApplicationException as ex:
-            async with self._lock:
-                _write_application_exception(ctx, oprot, "inviteIntoGroupCall", exception=ex)
-                return
-        except TalkException as e:
-            result.e = e
-        except Exception as e:
-            async with self._lock:
-                _write_application_exception(ctx, oprot, "inviteIntoGroupCall", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
-            raise
-        async with self._lock:
-            try:
-                oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('inviteIntoGroupCall', TMessageType.REPLY, 0)
-                result.write(oprot)
-                oprot.writeMessageEnd()
-                oprot.get_transport().flush()
-            except TTransportException as e:
-                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
-                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "inviteIntoGroupCall", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
-                else:
-                    raise e
-
-
-class _acquireCallRoute(FProcessorFunction):
-
-    def __init__(self, handler, lock):
-        super(_acquireCallRoute, self).__init__(handler, lock)
-
-    async def process(self, ctx, iprot, oprot):
-        args = acquireCallRoute_args()
-        args.read(iprot)
-        iprot.readMessageEnd()
-        result = acquireCallRoute_result()
-        try:
-            ret = self._handler([ctx, args.to, args.callType, args.fromEnvInfo])
+            ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "acquireCallRoute", exception=ex)
+                _write_application_exception(ctx, oprot, "restoreE2EEKeyBackup", exception=ex)
                 return
-        except TalkException as e:
+        except E2EEKeyBackupException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "acquireCallRoute", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "restoreE2EEKeyBackup", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('acquireCallRoute', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('restoreE2EEKeyBackup', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "acquireCallRoute", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "restoreE2EEKeyBackup", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
 
-class _acquireGroupCallRoute(FProcessorFunction):
+class _getE2EEKeyBackupInfo(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_acquireGroupCallRoute, self).__init__(handler, lock)
+        super(_getE2EEKeyBackupInfo, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = acquireGroupCallRoute_args()
+        args = getE2EEKeyBackupInfo_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = acquireGroupCallRoute_result()
+        result = getE2EEKeyBackupInfo_result()
         try:
-            ret = self._handler([ctx, args.chatMid, args.mediaType, args.isInitialHost, args.capabilities])
+            ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "acquireGroupCallRoute", exception=ex)
+                _write_application_exception(ctx, oprot, "getE2EEKeyBackupInfo", exception=ex)
                 return
-        except TalkException as e:
+        except E2EEKeyBackupException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "acquireGroupCallRoute", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "getE2EEKeyBackupInfo", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('acquireGroupCallRoute', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('getE2EEKeyBackupInfo', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "acquireGroupCallRoute", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "getE2EEKeyBackupInfo", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                else:
+                    raise e
+
+
+class _deleteE2EEKeyBackup(FProcessorFunction):
+
+    def __init__(self, handler, lock):
+        super(_deleteE2EEKeyBackup, self).__init__(handler, lock)
+
+    async def process(self, ctx, iprot, oprot):
+        args = deleteE2EEKeyBackup_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = deleteE2EEKeyBackup_result()
+        try:
+            ret = self._handler([ctx, args.request])
+            if inspect.iscoroutine(ret):
+                ret = await ret
+            result.success = ret
+        except TApplicationException as ex:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "deleteE2EEKeyBackup", exception=ex)
+                return
+        except E2EEKeyBackupException as e:
+            result.e = e
+        except Exception as e:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "deleteE2EEKeyBackup", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+            raise
+        async with self._lock:
+            try:
+                oprot.write_response_headers(ctx)
+                oprot.writeMessageBegin('deleteE2EEKeyBackup', TMessageType.REPLY, 0)
+                result.write(oprot)
+                oprot.writeMessageEnd()
+                oprot.get_transport().flush()
+            except TTransportException as e:
+                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
+                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
+                    raise _write_application_exception(ctx, oprot, "deleteE2EEKeyBackup", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                else:
+                    raise e
+
+
+class _createE2EEKeyBackupEnforced(FProcessorFunction):
+
+    def __init__(self, handler, lock):
+        super(_createE2EEKeyBackupEnforced, self).__init__(handler, lock)
+
+    async def process(self, ctx, iprot, oprot):
+        args = createE2EEKeyBackupEnforced_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = createE2EEKeyBackupEnforced_result()
+        try:
+            ret = self._handler([ctx, args.request])
+            if inspect.iscoroutine(ret):
+                ret = await ret
+            result.success = ret
+        except TApplicationException as ex:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "createE2EEKeyBackupEnforced", exception=ex)
+                return
+        except E2EEKeyBackupException as e:
+            result.e = e
+        except Exception as e:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "createE2EEKeyBackupEnforced", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+            raise
+        async with self._lock:
+            try:
+                oprot.write_response_headers(ctx)
+                oprot.writeMessageBegin('createE2EEKeyBackupEnforced', TMessageType.REPLY, 0)
+                result.write(oprot)
+                oprot.writeMessageEnd()
+                oprot.get_transport().flush()
+            except TTransportException as e:
+                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
+                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
+                    raise _write_application_exception(ctx, oprot, "createE2EEKeyBackupEnforced", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
@@ -442,13 +514,13 @@ def _write_application_exception(ctx, oprot, method, ex_code=None, message=None,
     oprot.get_transport().flush()
     return x
 
-class getGroupCall_args(object):
+class getE2EEKeyBackupCertificates_args(object):
     """
     Attributes:
-     - chatMid
+     - request
     """
-    def __init__(self, chatMid=None):
-        self.chatMid = chatMid
+    def __init__(self, request=None):
+        self.request = request
 
     def read(self, iprot):
         iprot.readStructBegin()
@@ -457,8 +529,9 @@ class getGroupCall_args(object):
             if ftype == TType.STOP:
                 break
             if fid == 2:
-                if ftype == TType.STRING:
-                    self.chatMid = iprot.readString()
+                if ftype == TType.STRUCT:
+                    self.request = GetE2EEKeyBackupCertificatesRequest()
+                    self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
             else:
@@ -469,10 +542,10 @@ class getGroupCall_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getGroupCall_args')
-        if self.chatMid is not None:
-            oprot.writeFieldBegin('chatMid', TType.STRING, 2)
-            oprot.writeString(self.chatMid)
+        oprot.writeStructBegin('getE2EEKeyBackupCertificates_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 2)
+            self.request.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -482,7 +555,7 @@ class getGroupCall_args(object):
 
     def __hash__(self):
         value = 17
-        value = (value * 31) ^ hash(make_hashable(self.chatMid))
+        value = (value * 31) ^ hash(make_hashable(self.request))
         return value
 
     def __repr__(self):
@@ -496,7 +569,7 @@ class getGroupCall_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getGroupCall_result(object):
+class getE2EEKeyBackupCertificates_result(object):
     """
     Attributes:
      - success
@@ -514,13 +587,13 @@ class getGroupCall_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = GroupCall()
+                    self.success = GetE2EEKeyBackupCertificatesResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = TalkException()
+                    self.e = E2EEKeyBackupException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -532,7 +605,7 @@ class getGroupCall_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getGroupCall_result')
+        oprot.writeStructBegin('getE2EEKeyBackupCertificates_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -564,17 +637,13 @@ class getGroupCall_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class inviteIntoGroupCall_args(object):
+class restoreE2EEKeyBackup_args(object):
     """
     Attributes:
-     - chatMid
-     - memberMids
-     - mediaType
+     - request
     """
-    def __init__(self, chatMid=None, memberMids=None, mediaType=None):
-        self.chatMid = chatMid
-        self.memberMids = memberMids
-        self.mediaType = mediaType
+    def __init__(self, request=None):
+        self.request = request
 
     def read(self, iprot):
         iprot.readStructBegin()
@@ -583,91 +652,9 @@ class inviteIntoGroupCall_args(object):
             if ftype == TType.STOP:
                 break
             if fid == 2:
-                if ftype == TType.STRING:
-                    self.chatMid = iprot.readString()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 3:
-                if ftype == TType.LIST:
-                    self.memberMids = []
-                    (_, elem11) = iprot.readListBegin()
-                    for _ in range(elem11):
-                        elem12 = iprot.readString()
-                        self.memberMids.append(elem12)
-                    iprot.readListEnd()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 4:
-                if ftype == TType.I32:
-                    self.mediaType = MediaType(iprot.readI32())
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('inviteIntoGroupCall_args')
-        if self.chatMid is not None:
-            oprot.writeFieldBegin('chatMid', TType.STRING, 2)
-            oprot.writeString(self.chatMid)
-            oprot.writeFieldEnd()
-        if self.memberMids is not None:
-            oprot.writeFieldBegin('memberMids', TType.LIST, 3)
-            oprot.writeListBegin(TType.STRING, len(self.memberMids))
-            for elem13 in self.memberMids:
-                oprot.writeString(elem13)
-            oprot.writeListEnd()
-            oprot.writeFieldEnd()
-        if self.mediaType is not None:
-            oprot.writeFieldBegin('mediaType', TType.I32, 4)
-            oprot.writeI32(self.mediaType)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.chatMid))
-        value = (value * 31) ^ hash(make_hashable(self.memberMids))
-        value = (value * 31) ^ hash(make_hashable(self.mediaType))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-class inviteIntoGroupCall_result(object):
-    """
-    Attributes:
-     - e
-    """
-    def __init__(self, e=None):
-        self.e = e
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = TalkException()
-                    self.e.read(iprot)
+                    self.request = RestoreE2EEKeyBackupRequest()
+                    self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
             else:
@@ -678,10 +665,10 @@ class inviteIntoGroupCall_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('inviteIntoGroupCall_result')
-        if self.e is not None:
-            oprot.writeFieldBegin('e', TType.STRUCT, 1)
-            self.e.write(oprot)
+        oprot.writeStructBegin('restoreE2EEKeyBackup_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 2)
+            self.request.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -691,7 +678,7 @@ class inviteIntoGroupCall_result(object):
 
     def __hash__(self):
         value = 17
-        value = (value * 31) ^ hash(make_hashable(self.e))
+        value = (value * 31) ^ hash(make_hashable(self.request))
         return value
 
     def __repr__(self):
@@ -705,95 +692,7 @@ class inviteIntoGroupCall_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class acquireCallRoute_args(object):
-    """
-    Attributes:
-     - to
-     - callType
-     - fromEnvInfo
-    """
-    def __init__(self, to=None, callType=None, fromEnvInfo=None):
-        self.to = to
-        self.callType = callType
-        self.fromEnvInfo = fromEnvInfo
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 2:
-                if ftype == TType.STRING:
-                    self.to = iprot.readString()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 3:
-                if ftype == TType.I32:
-                    self.callType = CallType(iprot.readI32())
-                else:
-                    iprot.skip(ftype)
-            elif fid == 4:
-                if ftype == TType.MAP:
-                    self.fromEnvInfo = {}
-                    (_, _, elem14) = iprot.readMapBegin()
-                    for _ in range(elem14):
-                        elem16 = iprot.readString()
-                        elem15 = iprot.readString()
-                        self.fromEnvInfo[elem16] = elem15
-                    iprot.readMapEnd()
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('acquireCallRoute_args')
-        if self.to is not None:
-            oprot.writeFieldBegin('to', TType.STRING, 2)
-            oprot.writeString(self.to)
-            oprot.writeFieldEnd()
-        if self.callType is not None:
-            oprot.writeFieldBegin('callType', TType.I32, 3)
-            oprot.writeI32(self.callType)
-            oprot.writeFieldEnd()
-        if self.fromEnvInfo is not None:
-            oprot.writeFieldBegin('fromEnvInfo', TType.MAP, 4)
-            oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.fromEnvInfo))
-            for elem18, elem17 in self.fromEnvInfo.items():
-                oprot.writeString(elem18)
-                oprot.writeString(elem17)
-            oprot.writeMapEnd()
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.to))
-        value = (value * 31) ^ hash(make_hashable(self.callType))
-        value = (value * 31) ^ hash(make_hashable(self.fromEnvInfo))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-class acquireCallRoute_result(object):
+class restoreE2EEKeyBackup_result(object):
     """
     Attributes:
      - success
@@ -811,13 +710,13 @@ class acquireCallRoute_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = CallRoute()
+                    self.success = RestoreE2EEKeyBackupResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = TalkException()
+                    self.e = E2EEKeyBackupException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -829,7 +728,7 @@ class acquireCallRoute_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('acquireCallRoute_result')
+        oprot.writeStructBegin('restoreE2EEKeyBackup_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -861,19 +760,13 @@ class acquireCallRoute_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class acquireGroupCallRoute_args(object):
+class getE2EEKeyBackupInfo_args(object):
     """
     Attributes:
-     - chatMid
-     - mediaType
-     - isInitialHost
-     - capabilities
+     - request
     """
-    def __init__(self, chatMid=None, mediaType=None, isInitialHost=None, capabilities=None):
-        self.chatMid = chatMid
-        self.mediaType = mediaType
-        self.isInitialHost = isInitialHost
-        self.capabilities = capabilities
+    def __init__(self, request=None):
+        self.request = request
 
     def read(self, iprot):
         iprot.readStructBegin()
@@ -882,28 +775,9 @@ class acquireGroupCallRoute_args(object):
             if ftype == TType.STOP:
                 break
             if fid == 2:
-                if ftype == TType.STRING:
-                    self.chatMid = iprot.readString()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 3:
-                if ftype == TType.I32:
-                    self.mediaType = MediaType(iprot.readI32())
-                else:
-                    iprot.skip(ftype)
-            elif fid == 4:
-                if ftype == TType.BOOL:
-                    self.isInitialHost = iprot.readBool()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 5:
-                if ftype == TType.LIST:
-                    self.capabilities = []
-                    (_, elem19) = iprot.readListBegin()
-                    for _ in range(elem19):
-                        elem20 = iprot.readString()
-                        self.capabilities.append(elem20)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.request = GetE2EEKeyBackupInfoRequest()
+                    self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
             else:
@@ -914,25 +788,10 @@ class acquireGroupCallRoute_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('acquireGroupCallRoute_args')
-        if self.chatMid is not None:
-            oprot.writeFieldBegin('chatMid', TType.STRING, 2)
-            oprot.writeString(self.chatMid)
-            oprot.writeFieldEnd()
-        if self.mediaType is not None:
-            oprot.writeFieldBegin('mediaType', TType.I32, 3)
-            oprot.writeI32(self.mediaType)
-            oprot.writeFieldEnd()
-        if self.isInitialHost is not None:
-            oprot.writeFieldBegin('isInitialHost', TType.BOOL, 4)
-            oprot.writeBool(self.isInitialHost)
-            oprot.writeFieldEnd()
-        if self.capabilities is not None:
-            oprot.writeFieldBegin('capabilities', TType.LIST, 5)
-            oprot.writeListBegin(TType.STRING, len(self.capabilities))
-            for elem21 in self.capabilities:
-                oprot.writeString(elem21)
-            oprot.writeListEnd()
+        oprot.writeStructBegin('getE2EEKeyBackupInfo_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 2)
+            self.request.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -942,10 +801,7 @@ class acquireGroupCallRoute_args(object):
 
     def __hash__(self):
         value = 17
-        value = (value * 31) ^ hash(make_hashable(self.chatMid))
-        value = (value * 31) ^ hash(make_hashable(self.mediaType))
-        value = (value * 31) ^ hash(make_hashable(self.isInitialHost))
-        value = (value * 31) ^ hash(make_hashable(self.capabilities))
+        value = (value * 31) ^ hash(make_hashable(self.request))
         return value
 
     def __repr__(self):
@@ -959,7 +815,7 @@ class acquireGroupCallRoute_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class acquireGroupCallRoute_result(object):
+class getE2EEKeyBackupInfo_result(object):
     """
     Attributes:
      - success
@@ -977,13 +833,13 @@ class acquireGroupCallRoute_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = GroupCallRoute()
+                    self.success = GetE2EEKeyBackupInfoResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = TalkException()
+                    self.e = E2EEKeyBackupException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -995,7 +851,253 @@ class acquireGroupCallRoute_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('acquireGroupCallRoute_result')
+        oprot.writeStructBegin('getE2EEKeyBackupInfo_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        if self.e is not None:
+            oprot.writeFieldBegin('e', TType.STRUCT, 1)
+            self.e.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
+        value = (value * 31) ^ hash(make_hashable(self.e))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class deleteE2EEKeyBackup_args(object):
+    """
+    Attributes:
+     - request
+    """
+    def __init__(self, request=None):
+        self.request = request
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 2:
+                if ftype == TType.STRUCT:
+                    self.request = DeleteE2EEKeyBackupRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('deleteE2EEKeyBackup_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 2)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.request))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class deleteE2EEKeyBackup_result(object):
+    """
+    Attributes:
+     - success
+     - e
+    """
+    def __init__(self, success=None, e=None):
+        self.success = success
+        self.e = e
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = DeleteE2EEKeyBackupResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
+                if ftype == TType.STRUCT:
+                    self.e = E2EEKeyBackupException()
+                    self.e.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('deleteE2EEKeyBackup_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        if self.e is not None:
+            oprot.writeFieldBegin('e', TType.STRUCT, 1)
+            self.e.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
+        value = (value * 31) ^ hash(make_hashable(self.e))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class createE2EEKeyBackupEnforced_args(object):
+    """
+    Attributes:
+     - request
+    """
+    def __init__(self, request=None):
+        self.request = request
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 2:
+                if ftype == TType.STRUCT:
+                    self.request = CreateE2EEKeyBackupRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('createE2EEKeyBackupEnforced_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 2)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.request))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class createE2EEKeyBackupEnforced_result(object):
+    """
+    Attributes:
+     - success
+     - e
+    """
+    def __init__(self, success=None, e=None):
+        self.success = success
+        self.e = e
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = CreateE2EEKeyBackupResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
+                if ftype == TType.STRUCT:
+                    self.e = E2EEKeyBackupException()
+                    self.e.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('createE2EEKeyBackupEnforced_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)

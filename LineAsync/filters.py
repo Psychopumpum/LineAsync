@@ -1,5 +1,5 @@
 import re, inspect
-from LineFrugal.TalkService.ttypes import Message
+from LineFrugal.ttypes import Message
 
 class Filter:
     #source pyrogram.Filters

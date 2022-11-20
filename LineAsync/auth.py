@@ -8,22 +8,21 @@ from frugal.protocol import FProtocol, FProtocolFactory
 from thrift.transport.TTransport import TMemoryBuffer, TTransportException
 from thrift.protocol.TCompactProtocol import TCompactProtocolAcceleratedFactory
 
-from LineFrugal.SecondaryService.ttypes import *
-from LineFrugal.SecondaryService import (
+from LineFrugal import (
+    FTalkServiceClient,
+    FAuthServiceClient,
     FSecondaryQrCodeLoginServiceClient,
     FSecondaryQrCodeLoginPermitServiceClient,
     FSecondaryQrCodeLoginPermitNoticeServiceClient
 )
+from LineFrugal.ttypes import *
 
-from LineFrugal.TalkService import FTalkServiceClient
-from LineFrugal.AuthService import FAuthServiceClient
-from LineFrugal.AuthService.ttypes import *
-
-import sys, os, rsa
+import sys, os, rsa, livejson, asyncio
 
 class Connection(object):
 
     def __init__(self, url, service, timeout = None, **kwargs):
+        self.loop             = asyncio.get_event_loop()
         self.ctx              = FContext()
         self.transport        = THttpClient(url, timeout = timeout, **kwargs)
         self.protocol_factory = TCompactProtocolAcceleratedFactory()
@@ -35,7 +34,7 @@ class Connection(object):
         assert isinstance(rfunc, str), f"Function name must be str and not {type(rfunc).__name__}"
         rfr = getattr(self._client, rfunc, None)
         if rfr:
-            return await rfr(self.ctx, *arg, **kws)
+            return await asyncio.create_task(rfr(self.ctx, *arg, **kws))
         raise Exception("Function name is not defined.")
 
 class Auth(Server):
@@ -68,7 +67,10 @@ class Auth(Server):
             60000,
             request = "httpx"
         )
-        login.transport.setCustomHeaders(self.server.talkHeaders)
+        hr = self.server.talkHeaders
+        if self.send_to:
+            if hr.get('X-Line-Access'):del hr['X-Line-Access']
+        login.transport.setCustomHeaders(hr)
         if self.appType == "CHROMEOS":
             login.transport.setCustomHeaders({ "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"})
         auth = await login.call("createSession", CreateQrSessionRequest())
@@ -79,17 +81,21 @@ class Auth(Server):
             60000,
             request = "httpx"
         )
-        self.server.talkHeaders.update({
+        hr.update({
             "X-Line-Access": auth.authSessionId
         })
-        verify.transport.setCustomHeaders(self.server.talkHeaders)
+        verify.transport.setCustomHeaders(hr)
         if self.appType == "CHROMEOS":
             verify.transport.setCustomHeaders({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        callback = f"{qrCode.callbackUrl}{self.server.generateSecret()}"
-        print(f"CallbackURL: {callback}\nLongPollingMax: {qrCode.longPollingMaxCount}\nInterval: {qrCode.longPollingIntervalSec}")
-        os.system(f"go run qrcode.go {callback}")
+        self.secret, secret = self.server.generateSecret()
+        callback = f"{qrCode.callbackUrl}{secret}"
+        if not self.send_to:
+            print(f"CallbackURL: {callback}\nLongPollingMax: {qrCode.longPollingMaxCount}\nInterval: {qrCode.longPollingIntervalSec}")
+            os.system(f"go run qrcode.go {callback}")
+        else:
+            p = await self.sendMessage(self.send_to, callback)
         try:
             verifyQrCode = await verify.call(
                 "checkQrCodeVerified",
@@ -113,18 +119,18 @@ class Auth(Server):
         try:
             result = await login.call("qrCodeLoginV2", QrCodeLoginV2Request(auth.authSessionId, "Psychopumpum", "BOTS", True))
             self.accessToken = result.tokenV3IssueResult.accessToken
+            self.refreshToken = result.tokenV3IssueResult.refreshToken
         except Exception as e:
             print(e)
             result = await login.call("qrCodeLogin", QrCodeLoginRequest(auth.authSessionId, "Psychopumpum", True))
             self.accessToken = result.accessToken
+            self.refreshToken = None
         self.server.talkHeaders.update({
             "X-Line-Access": self.accessToken
         })
         self.certificate = result.certificate
-        print(self.accessToken)
-        print(self.certificate)
-        print(result)
-        return self.loginWithAccessToken()
+        self.metaData = result.metaData
+        return await self.loginWithAccessToken()
 
     async def loginWithCredential(self, email, passwd):
         if self.appType:
@@ -165,10 +171,10 @@ class Auth(Server):
             'certificate': self.certificate,
             'e2eeVersion': 0
         })
-        try:
+        '''try:
             result = await auth.call('loginV2', lReq)
-        except TalkException as e:
-            result = await auth.call('loginZ', lReq)
+        except TalkException as e:'''
+        result = await auth.call('loginZ', lReq)
         if result.type == LoginResultType.REQUIRE_DEVICE_CONFIRM:
             print(f"Pincode: {result.pinCode}")
             self.server.setHeaders('X-Line-Access', result.verifier)
@@ -181,10 +187,11 @@ class Auth(Server):
                 'systemName': self.systemName,
                 'modelName': 'iPadOS'
             })
-            try:
+            '''try:
                 result = await auth.call('loginV2', lReq)
-            except TalkException as e:
-                result = await auth.call('loginZ', lReq)
+            except TalkException as e:'''
+            result = await auth.call('loginZ', lReq)
+        print(result)
         self.accessToken, self.certificate = result.authToken, result.certificate
         return self.loginWithAccessToken(self.accessToken)
 
@@ -219,7 +226,7 @@ class Auth(Server):
             lReq.e2eeVersion      = data['e2eeVersion']
         return lReq
 
-    def loginWithAccessToken(self):
+    async def loginWithAccessToken(self):
         self.server.talkHeaders.update({
             "X-Line-Access": self.accessToken
         })
@@ -227,7 +234,7 @@ class Auth(Server):
             self.server.talkHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.talk = Connection(self.server.TALK_SERVER_HOST + "/S4", FTalkServiceClient, 120000, request = "httplib2")
+        self.talk = Connection(self.server.TALK_SERVER_HOST + "/S4", FTalkServiceClient, 120000, request = "httpx")
         self.talk.transport.setCustomHeaders(self.server.talkHeaders)
         self.server.pollHeaders.update({
             "X-Line-Access": self.accessToken,
@@ -237,7 +244,35 @@ class Auth(Server):
             self.server.pollHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "aiohttp")
+        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "httpx")
         self.poll.transport.setCustomHeaders(self.server.pollHeaders)
         self.auth = Connection(self.server.TALK_SERVER_HOST + '/RS4', FAuthServiceClient, 4000, request = "httpx")
         self.auth.transport.setCustomHeaders(self.server.talkHeaders)
+        self.profile = await self.talk.call('getProfile', 4)
+        self.settings = livejson.File(f"{self.profile.mid}.json", True, True, 4)
+        if not self.settings.get("login"):
+            self.settings["login"] = {}
+        print(self.appType)
+        if not self.settings["login"].get(self.appType):
+            self.settings["login"][self.appType] = {}
+            self.settings["login"][self.appType].update({
+                "accessToken": self.accessToken,
+                "refreshToken": self.refreshToken if self.refreshToken else '',
+                "mid": self.profile.mid,
+                "certificate": self.certificate if self.certificate else '',
+                "secret": self.secret if self.secret else '',
+                **self.metaData
+            })
+        else:
+            self.settings["login"][self.appType].update({
+                "accessToken": self.accessToken,
+            })
+        self.e2ee = await self.talk.call('negotiateE2EEPublicKey', self.profile.mid)
+        if self.e2ee.publicKey:
+            key = self.e2ee.publicKey
+            return await self.talk.call('removeE2EEPublicKey', E2EEPublicKey(
+                key.version,
+                key.keyId,
+                key.keyData,
+                key.createdTime
+            ))

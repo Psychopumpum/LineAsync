@@ -3,7 +3,7 @@ from .filters import Filter
 from .auth import Connection
 from types import LambdaType
 from frugal.context import FContext
-from LineFrugal.TalkService import FTalkServiceClient, ttypes
+from LineFrugal import FTalkServiceClient, ttypes
 import concurrent.futures
 
 import asyncio, traceback, inspect, functools, signal, sys

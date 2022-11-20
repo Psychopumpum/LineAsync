@@ -25,23 +25,19 @@ from .ttypes import *
 
 class Iface(object):
 
-    async def fetchOps(self, ctx, localRev, count, globalRev, individualRev):
+    async def getChatapp(self, ctx, request):
         """
         Args:
             ctx: FContext
-            localRev: int (signed 64 bits)
-            count: int (signed 32 bits)
-            globalRev: int (signed 64 bits)
-            individualRev: int (signed 64 bits)
+            request: GetChatappRequest
         """
         pass
 
-    async def sendMessage(self, ctx, seq, message):
+    async def getMyChatapps(self, ctx, request):
         """
         Args:
             ctx: FContext
-            seq: int (signed 32 bits)
-            message: Message
+            request: GetMyChatappsRequest
         """
         pass
 
@@ -64,31 +60,25 @@ class Client(Iface):
         self._protocol_factory = provider.get_protocol_factory()
         middleware += provider.get_middleware()
         self._methods = {
-            'fetchOps': Method(self._fetchOps, middleware),
-            'sendMessage': Method(self._sendMessage, middleware),
+            'getChatapp': Method(self._getChatapp, middleware),
+            'getMyChatapps': Method(self._getMyChatapps, middleware),
         }
 
-    async def fetchOps(self, ctx, localRev, count, globalRev, individualRev):
+    async def getChatapp(self, ctx, request):
         """
         Args:
             ctx: FContext
-            localRev: int (signed 64 bits)
-            count: int (signed 32 bits)
-            globalRev: int (signed 64 bits)
-            individualRev: int (signed 64 bits)
+            request: GetChatappRequest
         """
-        return await self._methods['fetchOps']([ctx, localRev, count, globalRev, individualRev])
+        return await self._methods['getChatapp']([ctx, request])
 
-    async def _fetchOps(self, ctx, localRev, count, globalRev, individualRev):
+    async def _getChatapp(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('fetchOps', TMessageType.CALL, 0)
-        args = fetchOps_args()
-        args.localRev = localRev
-        args.count = count
-        args.globalRev = globalRev
-        args.individualRev = individualRev
+        oprot.writeMessageBegin('getChatapp', TMessageType.CALL, 0)
+        args = getChatapp_args()
+        args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
         response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
@@ -103,32 +93,30 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = fetchOps_result()
+        result = getChatapp_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "fetchOps failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getChatapp failed: unknown result")
 
-    async def sendMessage(self, ctx, seq, message):
+    async def getMyChatapps(self, ctx, request):
         """
         Args:
             ctx: FContext
-            seq: int (signed 32 bits)
-            message: Message
+            request: GetMyChatappsRequest
         """
-        return await self._methods['sendMessage']([ctx, seq, message])
+        return await self._methods['getMyChatapps']([ctx, request])
 
-    async def _sendMessage(self, ctx, seq, message):
+    async def _getMyChatapps(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('sendMessage', TMessageType.CALL, 0)
-        args = sendMessage_args()
-        args.seq = seq
-        args.message = message
+        oprot.writeMessageBegin('getMyChatapps', TMessageType.CALL, 0)
+        args = getMyChatapps_args()
+        args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
         response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
@@ -143,14 +131,14 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = sendMessage_result()
+        result = getMyChatapps_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "sendMessage failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getMyChatapps failed: unknown result")
 
 
 class Processor(FBaseProcessor):
@@ -166,86 +154,86 @@ class Processor(FBaseProcessor):
             middleware = [middleware]
 
         super(Processor, self).__init__()
-        self.add_to_processor_map('fetchOps', _fetchOps(Method(handler.fetchOps, middleware), self.get_write_lock()))
-        self.add_to_processor_map('sendMessage', _sendMessage(Method(handler.sendMessage, middleware), self.get_write_lock()))
+        self.add_to_processor_map('getChatapp', _getChatapp(Method(handler.getChatapp, middleware), self.get_write_lock()))
+        self.add_to_processor_map('getMyChatapps', _getMyChatapps(Method(handler.getMyChatapps, middleware), self.get_write_lock()))
 
 
-class _fetchOps(FProcessorFunction):
+class _getChatapp(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_fetchOps, self).__init__(handler, lock)
+        super(_getChatapp, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = fetchOps_args()
+        args = getChatapp_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = fetchOps_result()
+        result = getChatapp_result()
         try:
-            ret = self._handler([ctx, args.localRev, args.count, args.globalRev, args.individualRev])
+            ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "fetchOps", exception=ex)
+                _write_application_exception(ctx, oprot, "getChatapp", exception=ex)
                 return
-        except TalkException as e:
+        except ChatappException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "fetchOps", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "getChatapp", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('fetchOps', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('getChatapp', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "fetchOps", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "getChatapp", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
 
-class _sendMessage(FProcessorFunction):
+class _getMyChatapps(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_sendMessage, self).__init__(handler, lock)
+        super(_getMyChatapps, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = sendMessage_args()
+        args = getMyChatapps_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = sendMessage_result()
+        result = getMyChatapps_result()
         try:
-            ret = self._handler([ctx, args.seq, args.message])
+            ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
                 ret = await ret
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "sendMessage", exception=ex)
+                _write_application_exception(ctx, oprot, "getMyChatapps", exception=ex)
                 return
-        except TalkException as e:
+        except ChatappException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "sendMessage", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "getMyChatapps", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('sendMessage', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('getMyChatapps', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "sendMessage", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "getMyChatapps", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
@@ -262,19 +250,13 @@ def _write_application_exception(ctx, oprot, method, ex_code=None, message=None,
     oprot.get_transport().flush()
     return x
 
-class fetchOps_args(object):
+class getChatapp_args(object):
     """
     Attributes:
-     - localRev
-     - count
-     - globalRev
-     - individualRev
+     - request
     """
-    def __init__(self, localRev=None, count=None, globalRev=None, individualRev=None):
-        self.localRev = localRev
-        self.count = count
-        self.globalRev = globalRev
-        self.individualRev = individualRev
+    def __init__(self, request=None):
+        self.request = request
 
     def read(self, iprot):
         iprot.readStructBegin()
@@ -282,24 +264,10 @@ class fetchOps_args(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 2:
-                if ftype == TType.I64:
-                    self.localRev = iprot.readI64()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 3:
-                if ftype == TType.I32:
-                    self.count = iprot.readI32()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 4:
-                if ftype == TType.I64:
-                    self.globalRev = iprot.readI64()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 5:
-                if ftype == TType.I64:
-                    self.individualRev = iprot.readI64()
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = GetChatappRequest()
+                    self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
             else:
@@ -310,22 +278,10 @@ class fetchOps_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('fetchOps_args')
-        if self.localRev is not None:
-            oprot.writeFieldBegin('localRev', TType.I64, 2)
-            oprot.writeI64(self.localRev)
-            oprot.writeFieldEnd()
-        if self.count is not None:
-            oprot.writeFieldBegin('count', TType.I32, 3)
-            oprot.writeI32(self.count)
-            oprot.writeFieldEnd()
-        if self.globalRev is not None:
-            oprot.writeFieldBegin('globalRev', TType.I64, 4)
-            oprot.writeI64(self.globalRev)
-            oprot.writeFieldEnd()
-        if self.individualRev is not None:
-            oprot.writeFieldBegin('individualRev', TType.I64, 5)
-            oprot.writeI64(self.individualRev)
+        oprot.writeStructBegin('getChatapp_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -335,10 +291,7 @@ class fetchOps_args(object):
 
     def __hash__(self):
         value = 17
-        value = (value * 31) ^ hash(make_hashable(self.localRev))
-        value = (value * 31) ^ hash(make_hashable(self.count))
-        value = (value * 31) ^ hash(make_hashable(self.globalRev))
-        value = (value * 31) ^ hash(make_hashable(self.individualRev))
+        value = (value * 31) ^ hash(make_hashable(self.request))
         return value
 
     def __repr__(self):
@@ -352,7 +305,7 @@ class fetchOps_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class fetchOps_result(object):
+class getChatapp_result(object):
     """
     Attributes:
      - success
@@ -369,19 +322,14 @@ class fetchOps_result(object):
             if ftype == TType.STOP:
                 break
             if fid == 0:
-                if ftype == TType.LIST:
-                    self.success = []
-                    (_, elem16) = iprot.readListBegin()
-                    for _ in range(elem16):
-                        elem17 = Operation()
-                        elem17.read(iprot)
-                        self.success.append(elem17)
-                    iprot.readListEnd()
+                if ftype == TType.STRUCT:
+                    self.success = GetChatappResponse()
+                    self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = TalkException()
+                    self.e = ChatappException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -393,13 +341,10 @@ class fetchOps_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('fetchOps_result')
+        oprot.writeStructBegin('getChatapp_result')
         if self.success is not None:
-            oprot.writeFieldBegin('success', TType.LIST, 0)
-            oprot.writeListBegin(TType.STRUCT, len(self.success))
-            for elem18 in self.success:
-                elem18.write(oprot)
-            oprot.writeListEnd()
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.e is not None:
             oprot.writeFieldBegin('e', TType.STRUCT, 1)
@@ -428,15 +373,13 @@ class fetchOps_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class sendMessage_args(object):
+class getMyChatapps_args(object):
     """
     Attributes:
-     - seq
-     - message
+     - request
     """
-    def __init__(self, seq=None, message=None):
-        self.seq = seq
-        self.message = message
+    def __init__(self, request=None):
+        self.request = request
 
     def read(self, iprot):
         iprot.readStructBegin()
@@ -445,14 +388,9 @@ class sendMessage_args(object):
             if ftype == TType.STOP:
                 break
             if fid == 1:
-                if ftype == TType.I32:
-                    self.seq = iprot.readI32()
-                else:
-                    iprot.skip(ftype)
-            elif fid == 2:
                 if ftype == TType.STRUCT:
-                    self.message = Message()
-                    self.message.read(iprot)
+                    self.request = GetMyChatappsRequest()
+                    self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
             else:
@@ -463,14 +401,10 @@ class sendMessage_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('sendMessage_args')
-        if self.seq is not None:
-            oprot.writeFieldBegin('seq', TType.I32, 1)
-            oprot.writeI32(self.seq)
-            oprot.writeFieldEnd()
-        if self.message is not None:
-            oprot.writeFieldBegin('message', TType.STRUCT, 2)
-            self.message.write(oprot)
+        oprot.writeStructBegin('getMyChatapps_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -480,8 +414,7 @@ class sendMessage_args(object):
 
     def __hash__(self):
         value = 17
-        value = (value * 31) ^ hash(make_hashable(self.seq))
-        value = (value * 31) ^ hash(make_hashable(self.message))
+        value = (value * 31) ^ hash(make_hashable(self.request))
         return value
 
     def __repr__(self):
@@ -495,7 +428,7 @@ class sendMessage_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class sendMessage_result(object):
+class getMyChatapps_result(object):
     """
     Attributes:
      - success
@@ -513,13 +446,13 @@ class sendMessage_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = Message()
+                    self.success = GetMyChatappsResponse()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = TalkException()
+                    self.e = ChatappException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -531,7 +464,7 @@ class sendMessage_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('sendMessage_result')
+        oprot.writeStructBegin('getMyChatapps_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)

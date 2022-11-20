@@ -6,6 +6,8 @@ from .handlers import Methods, Handler, BaseClient
 import asyncio, sys
 from concurrent.futures.thread import ThreadPoolExecutor
 
+from LineFrugal.ttypes import TalkException
+
 class Client(Auth, Talk, Methods, BaseClient):
 
     BLACK = '\033[30m'
@@ -37,6 +39,10 @@ class Client(Auth, Talk, Methods, BaseClient):
         self._loop         = kwargs.pop("loop", asyncio.get_event_loop())
         self.workers       = kwargs.pop("workers", 2)
         self.executor      = ThreadPoolExecutor(self.workers, thread_name_prefix = "Handler")
+        self.refreshToken  = None
+        self.secret        = None
+        self.metaData      = {}
+        self.send_to       = None
         self.isLoggedIn    = False
         if self.proxy_host and self.proxy_port:
             self.proxies   = {"https": f"https://{self.proxy_host}:{self.proxy_port}"}
@@ -46,37 +52,29 @@ class Client(Auth, Talk, Methods, BaseClient):
         if not self.appType and not self.appName:
             self.appType = "IOSIPAD"
         if idOrAccessToken and passwd:
-            raise Exception("For now login with email is error.")
             self._loop.run_until_complete(
                 self.loginWithCredential(idOrAccessToken, passwd)
             )
         elif idOrAccessToken and not passwd:
             try:
                 self.accessToken = idOrAccessToken
-                self.loginWithAccessToken()
+                self._loop.run_until_complete(self.loginWithAccessToken())
                 self.isLoggedIn = True
-            except Exception as e:
-                print(e)
+            except TalkException as e:
                 self._loop.run_until_complete(self.loginWithQrCode())
         elif not (idOrAccessToken or idOrAccessToken and passwd):
             self._loop.run_until_complete(self.loginWithQrCode())
         Talk.__init__(self)
         if self.isLoggedIn:
             self.poll        = OEPoll(self)
+        self.printSuccess
+        self._loop.run_until_complete(self.getGroupIdsJoined())
 
     def add_handler(self, type, callback, filters):
         if type not in self.poll.plug_handler.keys():
             self.poll.plug_handler[type] = [{callback: [filters, self]}]
         else:
             self.poll.plug_handler[type].append({callback: [filters, self]})
-
-    """def initAll(self):
-        Liff.__init__(self)
-        Models.__init__(self)
-        Shop.__init__(self)
-        Talk.__init__(self)
-        Timeline.__init__(self)
-        Square.__init__(self)"""
 
     @property
     def printSuccess(self):

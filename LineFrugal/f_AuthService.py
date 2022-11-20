@@ -25,19 +25,19 @@ from .ttypes import *
 
 class Iface(object):
 
+    async def issueV3TokenForPrimary(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: IssueV3TokenForPrimaryRequest
+        """
+        pass
+
     async def openAuthSession(self, ctx, request):
         """
         Args:
             ctx: FContext
             request: AuthSessionRequest
-        """
-        pass
-
-    async def getRSAKeyInfo(self, ctx, provider):
-        """
-        Args:
-            ctx: FContext
-            provider: IdentityProvider
         """
         pass
 
@@ -231,8 +231,8 @@ class Client(Iface):
         self._protocol_factory = provider.get_protocol_factory()
         middleware += provider.get_middleware()
         self._methods = {
+            'issueV3TokenForPrimary': Method(self._issueV3TokenForPrimary, middleware),
             'openAuthSession': Method(self._openAuthSession, middleware),
-            'getRSAKeyInfo': Method(self._getRSAKeyInfo, middleware),
             'getAuthRSAKey': Method(self._getAuthRSAKey, middleware),
             'logoutZ': Method(self._logoutZ, middleware),
             'logoutV2': Method(self._logoutV2, middleware),
@@ -253,6 +253,44 @@ class Client(Iface):
             'setClovaCredential': Method(self._setClovaCredential, middleware),
             'verifyQrcodeWithE2EE': Method(self._verifyQrcodeWithE2EE, middleware),
         }
+
+    async def issueV3TokenForPrimary(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: IssueV3TokenForPrimaryRequest
+        """
+        return await self._methods['issueV3TokenForPrimary']([ctx, request])
+
+    async def _issueV3TokenForPrimary(self, ctx, request):
+        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
+        oprot = self._protocol_factory.get_protocol(memory_buffer)
+        oprot.write_request_headers(ctx)
+        oprot.writeMessageBegin('issueV3TokenForPrimary', TMessageType.CALL, 0)
+        args = issueV3TokenForPrimary_args()
+        args.request = request
+        args.write(oprot)
+        oprot.writeMessageEnd()
+        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
+
+        iprot = self._protocol_factory.get_protocol(response_transport)
+        iprot.read_response_headers(ctx)
+        _, mtype, _ = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
+                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
+            raise x
+        result = issueV3TokenForPrimary_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.e is not None:
+            raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "issueV3TokenForPrimary failed: unknown result")
 
     async def openAuthSession(self, ctx, request):
         """
@@ -291,44 +329,6 @@ class Client(Iface):
         if result.success is not None:
             return result.success
         raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "openAuthSession failed: unknown result")
-
-    async def getRSAKeyInfo(self, ctx, provider):
-        """
-        Args:
-            ctx: FContext
-            provider: IdentityProvider
-        """
-        return await self._methods['getRSAKeyInfo']([ctx, provider])
-
-    async def _getRSAKeyInfo(self, ctx, provider):
-        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
-        oprot = self._protocol_factory.get_protocol(memory_buffer)
-        oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('getRSAKeyInfo', TMessageType.CALL, 0)
-        args = getRSAKeyInfo_args()
-        args.provider = provider
-        args.write(oprot)
-        oprot.writeMessageEnd()
-        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
-
-        iprot = self._protocol_factory.get_protocol(response_transport)
-        iprot.read_response_headers(ctx)
-        _, mtype, _ = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
-                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
-            raise x
-        result = getRSAKeyInfo_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.e is not None:
-            raise result.e
-        if result.success is not None:
-            return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getRSAKeyInfo failed: unknown result")
 
     async def getAuthRSAKey(self, ctx, authSessionId, identityProvider):
         """
@@ -1092,8 +1092,8 @@ class Processor(FBaseProcessor):
             middleware = [middleware]
 
         super(Processor, self).__init__()
+        self.add_to_processor_map('issueV3TokenForPrimary', _issueV3TokenForPrimary(Method(handler.issueV3TokenForPrimary, middleware), self.get_write_lock()))
         self.add_to_processor_map('openAuthSession', _openAuthSession(Method(handler.openAuthSession, middleware), self.get_write_lock()))
-        self.add_to_processor_map('getRSAKeyInfo', _getRSAKeyInfo(Method(handler.getRSAKeyInfo, middleware), self.get_write_lock()))
         self.add_to_processor_map('getAuthRSAKey', _getAuthRSAKey(Method(handler.getAuthRSAKey, middleware), self.get_write_lock()))
         self.add_to_processor_map('logoutZ', _logoutZ(Method(handler.logoutZ, middleware), self.get_write_lock()))
         self.add_to_processor_map('logoutV2', _logoutV2(Method(handler.logoutV2, middleware), self.get_write_lock()))
@@ -1113,6 +1113,46 @@ class Processor(FBaseProcessor):
         self.add_to_processor_map('issueTokenForAccountMigrationSettings', _issueTokenForAccountMigrationSettings(Method(handler.issueTokenForAccountMigrationSettings, middleware), self.get_write_lock()))
         self.add_to_processor_map('setClovaCredential', _setClovaCredential(Method(handler.setClovaCredential, middleware), self.get_write_lock()))
         self.add_to_processor_map('verifyQrcodeWithE2EE', _verifyQrcodeWithE2EE(Method(handler.verifyQrcodeWithE2EE, middleware), self.get_write_lock()))
+
+
+class _issueV3TokenForPrimary(FProcessorFunction):
+
+    def __init__(self, handler, lock):
+        super(_issueV3TokenForPrimary, self).__init__(handler, lock)
+
+    async def process(self, ctx, iprot, oprot):
+        args = issueV3TokenForPrimary_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = issueV3TokenForPrimary_result()
+        try:
+            ret = self._handler([ctx, args.request])
+            if inspect.iscoroutine(ret):
+                ret = await ret
+            result.success = ret
+        except TApplicationException as ex:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "issueV3TokenForPrimary", exception=ex)
+                return
+        except TalkException as e:
+            result.e = e
+        except Exception as e:
+            async with self._lock:
+                _write_application_exception(ctx, oprot, "issueV3TokenForPrimary", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+            raise
+        async with self._lock:
+            try:
+                oprot.write_response_headers(ctx)
+                oprot.writeMessageBegin('issueV3TokenForPrimary', TMessageType.REPLY, 0)
+                result.write(oprot)
+                oprot.writeMessageEnd()
+                oprot.get_transport().flush()
+            except TTransportException as e:
+                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
+                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
+                    raise _write_application_exception(ctx, oprot, "issueV3TokenForPrimary", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                else:
+                    raise e
 
 
 class _openAuthSession(FProcessorFunction):
@@ -1151,46 +1191,6 @@ class _openAuthSession(FProcessorFunction):
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
                     raise _write_application_exception(ctx, oprot, "openAuthSession", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
-                else:
-                    raise e
-
-
-class _getRSAKeyInfo(FProcessorFunction):
-
-    def __init__(self, handler, lock):
-        super(_getRSAKeyInfo, self).__init__(handler, lock)
-
-    async def process(self, ctx, iprot, oprot):
-        args = getRSAKeyInfo_args()
-        args.read(iprot)
-        iprot.readMessageEnd()
-        result = getRSAKeyInfo_result()
-        try:
-            ret = self._handler([ctx, args.provider])
-            if inspect.iscoroutine(ret):
-                ret = await ret
-            result.success = ret
-        except TApplicationException as ex:
-            async with self._lock:
-                _write_application_exception(ctx, oprot, "getRSAKeyInfo", exception=ex)
-                return
-        except TalkException as e:
-            result.e = e
-        except Exception as e:
-            async with self._lock:
-                _write_application_exception(ctx, oprot, "getRSAKeyInfo", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
-            raise
-        async with self._lock:
-            try:
-                oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('getRSAKeyInfo', TMessageType.REPLY, 0)
-                result.write(oprot)
-                oprot.writeMessageEnd()
-                oprot.get_transport().flush()
-            except TTransportException as e:
-                # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
-                if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "getRSAKeyInfo", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
@@ -1964,6 +1964,129 @@ def _write_application_exception(ctx, oprot, method, ex_code=None, message=None,
     oprot.get_transport().flush()
     return x
 
+class issueV3TokenForPrimary_args(object):
+    """
+    Attributes:
+     - request
+    """
+    def __init__(self, request=None):
+        self.request = request
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.request = IssueV3TokenForPrimaryRequest()
+                    self.request.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('issueV3TokenForPrimary_args')
+        if self.request is not None:
+            oprot.writeFieldBegin('request', TType.STRUCT, 1)
+            self.request.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.request))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class issueV3TokenForPrimary_result(object):
+    """
+    Attributes:
+     - success
+     - e
+    """
+    def __init__(self, success=None, e=None):
+        self.success = success
+        self.e = e
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = IssueV3TokenForPrimaryResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
+                if ftype == TType.STRUCT:
+                    self.e = TalkException()
+                    self.e.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('issueV3TokenForPrimary_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        if self.e is not None:
+            oprot.writeFieldBegin('e', TType.STRUCT, 1)
+            self.e.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
+        value = (value * 31) ^ hash(make_hashable(self.e))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
 class openAuthSession_args(object):
     """
     Attributes:
@@ -2058,128 +2181,6 @@ class openAuthSession_result(object):
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRING, 0)
             oprot.writeString(self.success)
-            oprot.writeFieldEnd()
-        if self.e is not None:
-            oprot.writeFieldBegin('e', TType.STRUCT, 1)
-            self.e.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.success))
-        value = (value * 31) ^ hash(make_hashable(self.e))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-class getRSAKeyInfo_args(object):
-    """
-    Attributes:
-     - provider
-    """
-    def __init__(self, provider=None):
-        self.provider = provider
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 2:
-                if ftype == TType.I32:
-                    self.provider = IdentityProvider(iprot.readI32())
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('getRSAKeyInfo_args')
-        if self.provider is not None:
-            oprot.writeFieldBegin('provider', TType.I32, 2)
-            oprot.writeI32(self.provider)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.provider))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-class getRSAKeyInfo_result(object):
-    """
-    Attributes:
-     - success
-     - e
-    """
-    def __init__(self, success=None, e=None):
-        self.success = success
-        self.e = e
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 0:
-                if ftype == TType.STRUCT:
-                    self.success = RSAKey()
-                    self.success.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            elif fid == 1:
-                if ftype == TType.STRUCT:
-                    self.e = TalkException()
-                    self.e.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('getRSAKeyInfo_result')
-        if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRUCT, 0)
-            self.success.write(oprot)
             oprot.writeFieldEnd()
         if self.e is not None:
             oprot.writeFieldBegin('e', TType.STRUCT, 1)

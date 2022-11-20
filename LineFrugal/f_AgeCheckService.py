@@ -25,43 +25,46 @@ from .ttypes import *
 
 class Iface(object):
 
-    async def getCoinProducts(self, ctx, request):
+    async def retrieveRequestToken(self, ctx, carrier):
         """
         Args:
             ctx: FContext
-            request: GetCoinProductsRequest
+            carrier: Carrier
         """
         pass
 
-    async def getCoinPurchaseHistory(self, ctx, request):
+    async def retrieveRequestTokenWithDocomoV2(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: GetCoinHistoryRequest
+            request: RetrieveRequestTokenWithDocomoV2Request
         """
         pass
 
-    async def getCoinUseAndRefundHistory(self, ctx, request):
+    async def checkUserAge(self, ctx, carrier, sessionId, verifier, standardAge):
         """
         Args:
             ctx: FContext
-            request: GetCoinHistoryRequest
+            carrier: Carrier
+            sessionId: string
+            verifier: string
+            standardAge: int (signed 32 bits)
         """
         pass
 
-    async def getTotalCoinBalance(self, ctx, request):
+    async def checkUserAgeAfterApprovalWithDocomoV2(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: GetTotalCoinBalanceRequest
+            request: CheckUserAgeAfterApprovalWithDocomoV2Request
         """
         pass
 
-    async def reserveCoinPurchase(self, ctx, request):
+    async def checkUserAgeWithDocomoV2(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: CoinPurchaseReservation
+            request: CheckUserAgeWithDocomoV2Request
         """
         pass
 
@@ -84,27 +87,65 @@ class Client(Iface):
         self._protocol_factory = provider.get_protocol_factory()
         middleware += provider.get_middleware()
         self._methods = {
-            'getCoinProducts': Method(self._getCoinProducts, middleware),
-            'getCoinPurchaseHistory': Method(self._getCoinPurchaseHistory, middleware),
-            'getCoinUseAndRefundHistory': Method(self._getCoinUseAndRefundHistory, middleware),
-            'getTotalCoinBalance': Method(self._getTotalCoinBalance, middleware),
-            'reserveCoinPurchase': Method(self._reserveCoinPurchase, middleware),
+            'retrieveRequestToken': Method(self._retrieveRequestToken, middleware),
+            'retrieveRequestTokenWithDocomoV2': Method(self._retrieveRequestTokenWithDocomoV2, middleware),
+            'checkUserAge': Method(self._checkUserAge, middleware),
+            'checkUserAgeAfterApprovalWithDocomoV2': Method(self._checkUserAgeAfterApprovalWithDocomoV2, middleware),
+            'checkUserAgeWithDocomoV2': Method(self._checkUserAgeWithDocomoV2, middleware),
         }
 
-    async def getCoinProducts(self, ctx, request):
+    async def retrieveRequestToken(self, ctx, carrier):
         """
         Args:
             ctx: FContext
-            request: GetCoinProductsRequest
+            carrier: Carrier
         """
-        return await self._methods['getCoinProducts']([ctx, request])
+        return await self._methods['retrieveRequestToken']([ctx, carrier])
 
-    async def _getCoinProducts(self, ctx, request):
+    async def _retrieveRequestToken(self, ctx, carrier):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('getCoinProducts', TMessageType.CALL, 0)
-        args = getCoinProducts_args()
+        oprot.writeMessageBegin('retrieveRequestToken', TMessageType.CALL, 0)
+        args = retrieveRequestToken_args()
+        args.carrier = carrier
+        args.write(oprot)
+        oprot.writeMessageEnd()
+        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
+
+        iprot = self._protocol_factory.get_protocol(response_transport)
+        iprot.read_response_headers(ctx)
+        _, mtype, _ = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
+                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
+            raise x
+        result = retrieveRequestToken_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.e is not None:
+            raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "retrieveRequestToken failed: unknown result")
+
+    async def retrieveRequestTokenWithDocomoV2(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: RetrieveRequestTokenWithDocomoV2Request
+        """
+        return await self._methods['retrieveRequestTokenWithDocomoV2']([ctx, request])
+
+    async def _retrieveRequestTokenWithDocomoV2(self, ctx, request):
+        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
+        oprot = self._protocol_factory.get_protocol(memory_buffer)
+        oprot.write_request_headers(ctx)
+        oprot.writeMessageBegin('retrieveRequestTokenWithDocomoV2', TMessageType.CALL, 0)
+        args = retrieveRequestTokenWithDocomoV2_args()
         args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
@@ -120,29 +161,73 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = getCoinProducts_result()
+        result = retrieveRequestTokenWithDocomoV2_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getCoinProducts failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "retrieveRequestTokenWithDocomoV2 failed: unknown result")
 
-    async def getCoinPurchaseHistory(self, ctx, request):
+    async def checkUserAge(self, ctx, carrier, sessionId, verifier, standardAge):
         """
         Args:
             ctx: FContext
-            request: GetCoinHistoryRequest
+            carrier: Carrier
+            sessionId: string
+            verifier: string
+            standardAge: int (signed 32 bits)
         """
-        return await self._methods['getCoinPurchaseHistory']([ctx, request])
+        return await self._methods['checkUserAge']([ctx, carrier, sessionId, verifier, standardAge])
 
-    async def _getCoinPurchaseHistory(self, ctx, request):
+    async def _checkUserAge(self, ctx, carrier, sessionId, verifier, standardAge):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('getCoinPurchaseHistory', TMessageType.CALL, 0)
-        args = getCoinPurchaseHistory_args()
+        oprot.writeMessageBegin('checkUserAge', TMessageType.CALL, 0)
+        args = checkUserAge_args()
+        args.carrier = carrier
+        args.sessionId = sessionId
+        args.verifier = verifier
+        args.standardAge = standardAge
+        args.write(oprot)
+        oprot.writeMessageEnd()
+        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
+
+        iprot = self._protocol_factory.get_protocol(response_transport)
+        iprot.read_response_headers(ctx)
+        _, mtype, _ = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
+                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
+            raise x
+        result = checkUserAge_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.e is not None:
+            raise result.e
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "checkUserAge failed: unknown result")
+
+    async def checkUserAgeAfterApprovalWithDocomoV2(self, ctx, request):
+        """
+        Args:
+            ctx: FContext
+            request: CheckUserAgeAfterApprovalWithDocomoV2Request
+        """
+        return await self._methods['checkUserAgeAfterApprovalWithDocomoV2']([ctx, request])
+
+    async def _checkUserAgeAfterApprovalWithDocomoV2(self, ctx, request):
+        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
+        oprot = self._protocol_factory.get_protocol(memory_buffer)
+        oprot.write_request_headers(ctx)
+        oprot.writeMessageBegin('checkUserAgeAfterApprovalWithDocomoV2', TMessageType.CALL, 0)
+        args = checkUserAgeAfterApprovalWithDocomoV2_args()
         args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
@@ -158,29 +243,29 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = getCoinPurchaseHistory_result()
+        result = checkUserAgeAfterApprovalWithDocomoV2_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getCoinPurchaseHistory failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "checkUserAgeAfterApprovalWithDocomoV2 failed: unknown result")
 
-    async def getCoinUseAndRefundHistory(self, ctx, request):
+    async def checkUserAgeWithDocomoV2(self, ctx, request):
         """
         Args:
             ctx: FContext
-            request: GetCoinHistoryRequest
+            request: CheckUserAgeWithDocomoV2Request
         """
-        return await self._methods['getCoinUseAndRefundHistory']([ctx, request])
+        return await self._methods['checkUserAgeWithDocomoV2']([ctx, request])
 
-    async def _getCoinUseAndRefundHistory(self, ctx, request):
+    async def _checkUserAgeWithDocomoV2(self, ctx, request):
         memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
         oprot = self._protocol_factory.get_protocol(memory_buffer)
         oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('getCoinUseAndRefundHistory', TMessageType.CALL, 0)
-        args = getCoinUseAndRefundHistory_args()
+        oprot.writeMessageBegin('checkUserAgeWithDocomoV2', TMessageType.CALL, 0)
+        args = checkUserAgeWithDocomoV2_args()
         args.request = request
         args.write(oprot)
         oprot.writeMessageEnd()
@@ -196,90 +281,14 @@ class Client(Iface):
             if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
                 raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
             raise x
-        result = getCoinUseAndRefundHistory_result()
+        result = checkUserAgeWithDocomoV2_result()
         result.read(iprot)
         iprot.readMessageEnd()
         if result.e is not None:
             raise result.e
         if result.success is not None:
             return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getCoinUseAndRefundHistory failed: unknown result")
-
-    async def getTotalCoinBalance(self, ctx, request):
-        """
-        Args:
-            ctx: FContext
-            request: GetTotalCoinBalanceRequest
-        """
-        return await self._methods['getTotalCoinBalance']([ctx, request])
-
-    async def _getTotalCoinBalance(self, ctx, request):
-        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
-        oprot = self._protocol_factory.get_protocol(memory_buffer)
-        oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('getTotalCoinBalance', TMessageType.CALL, 0)
-        args = getTotalCoinBalance_args()
-        args.request = request
-        args.write(oprot)
-        oprot.writeMessageEnd()
-        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
-
-        iprot = self._protocol_factory.get_protocol(response_transport)
-        iprot.read_response_headers(ctx)
-        _, mtype, _ = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
-                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
-            raise x
-        result = getTotalCoinBalance_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.e is not None:
-            raise result.e
-        if result.success is not None:
-            return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "getTotalCoinBalance failed: unknown result")
-
-    async def reserveCoinPurchase(self, ctx, request):
-        """
-        Args:
-            ctx: FContext
-            request: CoinPurchaseReservation
-        """
-        return await self._methods['reserveCoinPurchase']([ctx, request])
-
-    async def _reserveCoinPurchase(self, ctx, request):
-        memory_buffer = TMemoryOutputBuffer(self._transport.get_request_size_limit())
-        oprot = self._protocol_factory.get_protocol(memory_buffer)
-        oprot.write_request_headers(ctx)
-        oprot.writeMessageBegin('reserveCoinPurchase', TMessageType.CALL, 0)
-        args = reserveCoinPurchase_args()
-        args.request = request
-        args.write(oprot)
-        oprot.writeMessageEnd()
-        response_transport = await self._transport.request(ctx, memory_buffer.getvalue())
-
-        iprot = self._protocol_factory.get_protocol(response_transport)
-        iprot.read_response_headers(ctx)
-        _, mtype, _ = iprot.readMessageBegin()
-        if mtype == TMessageType.EXCEPTION:
-            x = TApplicationException()
-            x.read(iprot)
-            iprot.readMessageEnd()
-            if x.type == TApplicationExceptionType.RESPONSE_TOO_LARGE:
-                raise TTransportException(type=TTransportExceptionType.RESPONSE_TOO_LARGE, message=x.message)
-            raise x
-        result = reserveCoinPurchase_result()
-        result.read(iprot)
-        iprot.readMessageEnd()
-        if result.e is not None:
-            raise result.e
-        if result.success is not None:
-            return result.success
-        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "reserveCoinPurchase failed: unknown result")
+        raise TApplicationException(TApplicationExceptionType.MISSING_RESULT, "checkUserAgeWithDocomoV2 failed: unknown result")
 
 
 class Processor(FBaseProcessor):
@@ -295,63 +304,63 @@ class Processor(FBaseProcessor):
             middleware = [middleware]
 
         super(Processor, self).__init__()
-        self.add_to_processor_map('getCoinProducts', _getCoinProducts(Method(handler.getCoinProducts, middleware), self.get_write_lock()))
-        self.add_to_processor_map('getCoinPurchaseHistory', _getCoinPurchaseHistory(Method(handler.getCoinPurchaseHistory, middleware), self.get_write_lock()))
-        self.add_to_processor_map('getCoinUseAndRefundHistory', _getCoinUseAndRefundHistory(Method(handler.getCoinUseAndRefundHistory, middleware), self.get_write_lock()))
-        self.add_to_processor_map('getTotalCoinBalance', _getTotalCoinBalance(Method(handler.getTotalCoinBalance, middleware), self.get_write_lock()))
-        self.add_to_processor_map('reserveCoinPurchase', _reserveCoinPurchase(Method(handler.reserveCoinPurchase, middleware), self.get_write_lock()))
+        self.add_to_processor_map('retrieveRequestToken', _retrieveRequestToken(Method(handler.retrieveRequestToken, middleware), self.get_write_lock()))
+        self.add_to_processor_map('retrieveRequestTokenWithDocomoV2', _retrieveRequestTokenWithDocomoV2(Method(handler.retrieveRequestTokenWithDocomoV2, middleware), self.get_write_lock()))
+        self.add_to_processor_map('checkUserAge', _checkUserAge(Method(handler.checkUserAge, middleware), self.get_write_lock()))
+        self.add_to_processor_map('checkUserAgeAfterApprovalWithDocomoV2', _checkUserAgeAfterApprovalWithDocomoV2(Method(handler.checkUserAgeAfterApprovalWithDocomoV2, middleware), self.get_write_lock()))
+        self.add_to_processor_map('checkUserAgeWithDocomoV2', _checkUserAgeWithDocomoV2(Method(handler.checkUserAgeWithDocomoV2, middleware), self.get_write_lock()))
 
 
-class _getCoinProducts(FProcessorFunction):
+class _retrieveRequestToken(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_getCoinProducts, self).__init__(handler, lock)
+        super(_retrieveRequestToken, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = getCoinProducts_args()
+        args = retrieveRequestToken_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = getCoinProducts_result()
+        result = retrieveRequestToken_result()
         try:
-            ret = self._handler([ctx, args.request])
+            ret = self._handler([ctx, args.carrier])
             if inspect.iscoroutine(ret):
                 ret = await ret
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getCoinProducts", exception=ex)
+                _write_application_exception(ctx, oprot, "retrieveRequestToken", exception=ex)
                 return
-        except CoinException as e:
+        except TalkException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getCoinProducts", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "retrieveRequestToken", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('getCoinProducts', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('retrieveRequestToken', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "getCoinProducts", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "retrieveRequestToken", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
 
-class _getCoinPurchaseHistory(FProcessorFunction):
+class _retrieveRequestTokenWithDocomoV2(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_getCoinPurchaseHistory, self).__init__(handler, lock)
+        super(_retrieveRequestTokenWithDocomoV2, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = getCoinPurchaseHistory_args()
+        args = retrieveRequestTokenWithDocomoV2_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = getCoinPurchaseHistory_result()
+        result = retrieveRequestTokenWithDocomoV2_result()
         try:
             ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
@@ -359,79 +368,79 @@ class _getCoinPurchaseHistory(FProcessorFunction):
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getCoinPurchaseHistory", exception=ex)
+                _write_application_exception(ctx, oprot, "retrieveRequestTokenWithDocomoV2", exception=ex)
                 return
-        except CoinException as e:
+        except TalkException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getCoinPurchaseHistory", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "retrieveRequestTokenWithDocomoV2", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('getCoinPurchaseHistory', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('retrieveRequestTokenWithDocomoV2', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "getCoinPurchaseHistory", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "retrieveRequestTokenWithDocomoV2", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
 
-class _getCoinUseAndRefundHistory(FProcessorFunction):
+class _checkUserAge(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_getCoinUseAndRefundHistory, self).__init__(handler, lock)
+        super(_checkUserAge, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = getCoinUseAndRefundHistory_args()
+        args = checkUserAge_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = getCoinUseAndRefundHistory_result()
+        result = checkUserAge_result()
         try:
-            ret = self._handler([ctx, args.request])
+            ret = self._handler([ctx, args.carrier, args.sessionId, args.verifier, args.standardAge])
             if inspect.iscoroutine(ret):
                 ret = await ret
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getCoinUseAndRefundHistory", exception=ex)
+                _write_application_exception(ctx, oprot, "checkUserAge", exception=ex)
                 return
-        except CoinException as e:
+        except TalkException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getCoinUseAndRefundHistory", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "checkUserAge", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('getCoinUseAndRefundHistory', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('checkUserAge', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "getCoinUseAndRefundHistory", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "checkUserAge", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
 
-class _getTotalCoinBalance(FProcessorFunction):
+class _checkUserAgeAfterApprovalWithDocomoV2(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_getTotalCoinBalance, self).__init__(handler, lock)
+        super(_checkUserAgeAfterApprovalWithDocomoV2, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = getTotalCoinBalance_args()
+        args = checkUserAgeAfterApprovalWithDocomoV2_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = getTotalCoinBalance_result()
+        result = checkUserAgeAfterApprovalWithDocomoV2_result()
         try:
             ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
@@ -439,39 +448,39 @@ class _getTotalCoinBalance(FProcessorFunction):
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getTotalCoinBalance", exception=ex)
+                _write_application_exception(ctx, oprot, "checkUserAgeAfterApprovalWithDocomoV2", exception=ex)
                 return
-        except CoinException as e:
+        except TalkException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "getTotalCoinBalance", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "checkUserAgeAfterApprovalWithDocomoV2", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('getTotalCoinBalance', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('checkUserAgeAfterApprovalWithDocomoV2', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "getTotalCoinBalance", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "checkUserAgeAfterApprovalWithDocomoV2", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
 
-class _reserveCoinPurchase(FProcessorFunction):
+class _checkUserAgeWithDocomoV2(FProcessorFunction):
 
     def __init__(self, handler, lock):
-        super(_reserveCoinPurchase, self).__init__(handler, lock)
+        super(_checkUserAgeWithDocomoV2, self).__init__(handler, lock)
 
     async def process(self, ctx, iprot, oprot):
-        args = reserveCoinPurchase_args()
+        args = checkUserAgeWithDocomoV2_args()
         args.read(iprot)
         iprot.readMessageEnd()
-        result = reserveCoinPurchase_result()
+        result = checkUserAgeWithDocomoV2_result()
         try:
             ret = self._handler([ctx, args.request])
             if inspect.iscoroutine(ret):
@@ -479,25 +488,25 @@ class _reserveCoinPurchase(FProcessorFunction):
             result.success = ret
         except TApplicationException as ex:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "reserveCoinPurchase", exception=ex)
+                _write_application_exception(ctx, oprot, "checkUserAgeWithDocomoV2", exception=ex)
                 return
-        except CoinException as e:
+        except TalkException as e:
             result.e = e
         except Exception as e:
             async with self._lock:
-                _write_application_exception(ctx, oprot, "reserveCoinPurchase", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
+                _write_application_exception(ctx, oprot, "checkUserAgeWithDocomoV2", ex_code=TApplicationExceptionType.INTERNAL_ERROR, message=str(e))
             raise
         async with self._lock:
             try:
                 oprot.write_response_headers(ctx)
-                oprot.writeMessageBegin('reserveCoinPurchase', TMessageType.REPLY, 0)
+                oprot.writeMessageBegin('checkUserAgeWithDocomoV2', TMessageType.REPLY, 0)
                 result.write(oprot)
                 oprot.writeMessageEnd()
                 oprot.get_transport().flush()
             except TTransportException as e:
                 # catch a request too large error because the TMemoryOutputBuffer always throws that if too much data is written
                 if e.type == TTransportExceptionType.REQUEST_TOO_LARGE:
-                    raise _write_application_exception(ctx, oprot, "reserveCoinPurchase", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
+                    raise _write_application_exception(ctx, oprot, "checkUserAgeWithDocomoV2", ex_code=TApplicationExceptionType.RESPONSE_TOO_LARGE, message=e.message)
                 else:
                     raise e
 
@@ -514,13 +523,13 @@ def _write_application_exception(ctx, oprot, method, ex_code=None, message=None,
     oprot.get_transport().flush()
     return x
 
-class getCoinProducts_args(object):
+class retrieveRequestToken_args(object):
     """
     Attributes:
-     - request
+     - carrier
     """
-    def __init__(self, request=None):
-        self.request = request
+    def __init__(self, carrier=None):
+        self.carrier = carrier
 
     def read(self, iprot):
         iprot.readStructBegin()
@@ -528,10 +537,9 @@ class getCoinProducts_args(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.request = GetCoinProductsRequest()
-                    self.request.read(iprot)
+            if fid == 2:
+                if ftype == TType.I32:
+                    self.carrier = Carrier(iprot.readI32())
                 else:
                     iprot.skip(ftype)
             else:
@@ -542,10 +550,10 @@ class getCoinProducts_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getCoinProducts_args')
-        if self.request is not None:
-            oprot.writeFieldBegin('request', TType.STRUCT, 1)
-            self.request.write(oprot)
+        oprot.writeStructBegin('retrieveRequestToken_args')
+        if self.carrier is not None:
+            oprot.writeFieldBegin('carrier', TType.I32, 2)
+            oprot.writeI32(self.carrier)
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
@@ -555,7 +563,7 @@ class getCoinProducts_args(object):
 
     def __hash__(self):
         value = 17
-        value = (value * 31) ^ hash(make_hashable(self.request))
+        value = (value * 31) ^ hash(make_hashable(self.carrier))
         return value
 
     def __repr__(self):
@@ -569,7 +577,7 @@ class getCoinProducts_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getCoinProducts_result(object):
+class retrieveRequestToken_result(object):
     """
     Attributes:
      - success
@@ -587,13 +595,13 @@ class getCoinProducts_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = GetCoinProductsResponse()
+                    self.success = AgeCheckRequestResult()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = CoinException()
+                    self.e = TalkException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -605,7 +613,7 @@ class getCoinProducts_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getCoinProducts_result')
+        oprot.writeStructBegin('retrieveRequestToken_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -637,7 +645,7 @@ class getCoinProducts_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getCoinPurchaseHistory_args(object):
+class retrieveRequestTokenWithDocomoV2_args(object):
     """
     Attributes:
      - request
@@ -653,7 +661,7 @@ class getCoinPurchaseHistory_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = GetCoinHistoryRequest()
+                    self.request = RetrieveRequestTokenWithDocomoV2Request()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -665,7 +673,7 @@ class getCoinPurchaseHistory_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getCoinPurchaseHistory_args')
+        oprot.writeStructBegin('retrieveRequestTokenWithDocomoV2_args')
         if self.request is not None:
             oprot.writeFieldBegin('request', TType.STRUCT, 1)
             self.request.write(oprot)
@@ -692,7 +700,7 @@ class getCoinPurchaseHistory_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getCoinPurchaseHistory_result(object):
+class retrieveRequestTokenWithDocomoV2_result(object):
     """
     Attributes:
      - success
@@ -710,13 +718,13 @@ class getCoinPurchaseHistory_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = GetCoinHistoryResponse()
+                    self.success = RetrieveRequestTokenWithDocomoV2Response()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = CoinException()
+                    self.e = TalkException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -728,7 +736,7 @@ class getCoinPurchaseHistory_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getCoinPurchaseHistory_result')
+        oprot.writeStructBegin('retrieveRequestTokenWithDocomoV2_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -760,7 +768,164 @@ class getCoinPurchaseHistory_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getCoinUseAndRefundHistory_args(object):
+class checkUserAge_args(object):
+    """
+    Attributes:
+     - carrier
+     - sessionId
+     - verifier
+     - standardAge
+    """
+    def __init__(self, carrier=None, sessionId=None, verifier=None, standardAge=None):
+        self.carrier = carrier
+        self.sessionId = sessionId
+        self.verifier = verifier
+        self.standardAge = standardAge
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 2:
+                if ftype == TType.I32:
+                    self.carrier = Carrier(iprot.readI32())
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.sessionId = iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.verifier = iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 5:
+                if ftype == TType.I32:
+                    self.standardAge = iprot.readI32()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('checkUserAge_args')
+        if self.carrier is not None:
+            oprot.writeFieldBegin('carrier', TType.I32, 2)
+            oprot.writeI32(self.carrier)
+            oprot.writeFieldEnd()
+        if self.sessionId is not None:
+            oprot.writeFieldBegin('sessionId', TType.STRING, 3)
+            oprot.writeString(self.sessionId)
+            oprot.writeFieldEnd()
+        if self.verifier is not None:
+            oprot.writeFieldBegin('verifier', TType.STRING, 4)
+            oprot.writeString(self.verifier)
+            oprot.writeFieldEnd()
+        if self.standardAge is not None:
+            oprot.writeFieldBegin('standardAge', TType.I32, 5)
+            oprot.writeI32(self.standardAge)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.carrier))
+        value = (value * 31) ^ hash(make_hashable(self.sessionId))
+        value = (value * 31) ^ hash(make_hashable(self.verifier))
+        value = (value * 31) ^ hash(make_hashable(self.standardAge))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class checkUserAge_result(object):
+    """
+    Attributes:
+     - success
+     - e
+    """
+    def __init__(self, success=None, e=None):
+        self.success = success
+        self.e = e
+
+    def read(self, iprot):
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.I32:
+                    self.success = UserAge(iprot.readI32())
+                else:
+                    iprot.skip(ftype)
+            elif fid == 1:
+                if ftype == TType.STRUCT:
+                    self.e = TalkException()
+                    self.e.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+        self.validate()
+
+    def write(self, oprot):
+        self.validate()
+        oprot.writeStructBegin('checkUserAge_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.I32, 0)
+            oprot.writeI32(self.success)
+            oprot.writeFieldEnd()
+        if self.e is not None:
+            oprot.writeFieldBegin('e', TType.STRUCT, 1)
+            self.e.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __hash__(self):
+        value = 17
+        value = (value * 31) ^ hash(make_hashable(self.success))
+        value = (value * 31) ^ hash(make_hashable(self.e))
+        return value
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+            for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+class checkUserAgeAfterApprovalWithDocomoV2_args(object):
     """
     Attributes:
      - request
@@ -776,7 +941,7 @@ class getCoinUseAndRefundHistory_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = GetCoinHistoryRequest()
+                    self.request = CheckUserAgeAfterApprovalWithDocomoV2Request()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -788,7 +953,7 @@ class getCoinUseAndRefundHistory_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getCoinUseAndRefundHistory_args')
+        oprot.writeStructBegin('checkUserAgeAfterApprovalWithDocomoV2_args')
         if self.request is not None:
             oprot.writeFieldBegin('request', TType.STRUCT, 1)
             self.request.write(oprot)
@@ -815,7 +980,7 @@ class getCoinUseAndRefundHistory_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getCoinUseAndRefundHistory_result(object):
+class checkUserAgeAfterApprovalWithDocomoV2_result(object):
     """
     Attributes:
      - success
@@ -833,13 +998,13 @@ class getCoinUseAndRefundHistory_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = GetCoinHistoryResponse()
+                    self.success = CheckUserAgeAfterApprovalWithDocomoV2Response()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = CoinException()
+                    self.e = TalkException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -851,7 +1016,7 @@ class getCoinUseAndRefundHistory_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getCoinUseAndRefundHistory_result')
+        oprot.writeStructBegin('checkUserAgeAfterApprovalWithDocomoV2_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)
@@ -883,7 +1048,7 @@ class getCoinUseAndRefundHistory_result(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getTotalCoinBalance_args(object):
+class checkUserAgeWithDocomoV2_args(object):
     """
     Attributes:
      - request
@@ -899,7 +1064,7 @@ class getTotalCoinBalance_args(object):
                 break
             if fid == 1:
                 if ftype == TType.STRUCT:
-                    self.request = GetTotalCoinBalanceRequest()
+                    self.request = CheckUserAgeWithDocomoV2Request()
                     self.request.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -911,7 +1076,7 @@ class getTotalCoinBalance_args(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getTotalCoinBalance_args')
+        oprot.writeStructBegin('checkUserAgeWithDocomoV2_args')
         if self.request is not None:
             oprot.writeFieldBegin('request', TType.STRUCT, 1)
             self.request.write(oprot)
@@ -938,7 +1103,7 @@ class getTotalCoinBalance_args(object):
     def __ne__(self, other):
         return not (self == other)
 
-class getTotalCoinBalance_result(object):
+class checkUserAgeWithDocomoV2_result(object):
     """
     Attributes:
      - success
@@ -956,13 +1121,13 @@ class getTotalCoinBalance_result(object):
                 break
             if fid == 0:
                 if ftype == TType.STRUCT:
-                    self.success = GetTotalCoinBalanceResponse()
+                    self.success = CheckUserAgeWithDocomoV2Response()
                     self.success.read(iprot)
                 else:
                     iprot.skip(ftype)
             elif fid == 1:
                 if ftype == TType.STRUCT:
-                    self.e = CoinException()
+                    self.e = TalkException()
                     self.e.read(iprot)
                 else:
                     iprot.skip(ftype)
@@ -974,130 +1139,7 @@ class getTotalCoinBalance_result(object):
 
     def write(self, oprot):
         self.validate()
-        oprot.writeStructBegin('getTotalCoinBalance_result')
-        if self.success is not None:
-            oprot.writeFieldBegin('success', TType.STRUCT, 0)
-            self.success.write(oprot)
-            oprot.writeFieldEnd()
-        if self.e is not None:
-            oprot.writeFieldBegin('e', TType.STRUCT, 1)
-            self.e.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.success))
-        value = (value * 31) ^ hash(make_hashable(self.e))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-class reserveCoinPurchase_args(object):
-    """
-    Attributes:
-     - request
-    """
-    def __init__(self, request=None):
-        self.request = request
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 1:
-                if ftype == TType.STRUCT:
-                    self.request = CoinPurchaseReservation()
-                    self.request.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('reserveCoinPurchase_args')
-        if self.request is not None:
-            oprot.writeFieldBegin('request', TType.STRUCT, 1)
-            self.request.write(oprot)
-            oprot.writeFieldEnd()
-        oprot.writeFieldStop()
-        oprot.writeStructEnd()
-
-    def validate(self):
-        return
-
-    def __hash__(self):
-        value = 17
-        value = (value * 31) ^ hash(make_hashable(self.request))
-        return value
-
-    def __repr__(self):
-        L = ['%s=%r' % (key, value)
-            for key, value in self.__dict__.items()]
-        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
-
-    def __eq__(self, other):
-        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        return not (self == other)
-
-class reserveCoinPurchase_result(object):
-    """
-    Attributes:
-     - success
-     - e
-    """
-    def __init__(self, success=None, e=None):
-        self.success = success
-        self.e = e
-
-    def read(self, iprot):
-        iprot.readStructBegin()
-        while True:
-            (fname, ftype, fid) = iprot.readFieldBegin()
-            if ftype == TType.STOP:
-                break
-            if fid == 0:
-                if ftype == TType.STRUCT:
-                    self.success = PaymentReservationResult()
-                    self.success.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            elif fid == 1:
-                if ftype == TType.STRUCT:
-                    self.e = CoinException()
-                    self.e.read(iprot)
-                else:
-                    iprot.skip(ftype)
-            else:
-                iprot.skip(ftype)
-            iprot.readFieldEnd()
-        iprot.readStructEnd()
-        self.validate()
-
-    def write(self, oprot):
-        self.validate()
-        oprot.writeStructBegin('reserveCoinPurchase_result')
+        oprot.writeStructBegin('checkUserAgeWithDocomoV2_result')
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.STRUCT, 0)
             self.success.write(oprot)

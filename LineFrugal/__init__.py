@@ -1,0 +1,25 @@
+from .f_AgeCheckService import Client as FAgeCheckServiceClient
+from .f_AgeCheckService import Iface as FAgeCheckServiceIface
+from .f_AuthService import Client as FAuthServiceClient
+from .f_AuthService import Iface as FAuthServiceIface
+from .f_BuddyService import Client as FBuddyServiceClient
+from .f_BuddyService import Iface as FBuddyServiceIface
+from .f_CallService import Client as FCallServiceClient
+from .f_CallService import Iface as FCallServiceIface
+from .f_ChannelService import Client as FChannelServiceClient
+from .f_ChannelService import Iface as FChannelServiceIface
+from .f_ChatappService import Client as FChatappServiceClient
+from .f_ChatappService import Iface as FChatappServiceIface
+from .f_CoinService import Client as FCoinServiceClient
+from .f_CoinService import Iface as FCoinServiceIface
+from .f_E2EEKeyBackupService import Client as FE2EEKeyBackupServiceClient
+from .f_E2EEKeyBackupService import Iface as FE2EEKeyBackupServiceIface
+from .f_SecondaryQrCodeLoginPermitNoticeService import Client as FSecondaryQrCodeLoginPermitNoticeServiceClient
+from .f_SecondaryQrCodeLoginPermitNoticeService import Iface as FSecondaryQrCodeLoginPermitNoticeServiceIface
+from .f_SecondaryQrCodeLoginPermitService import Client as FSecondaryQrCodeLoginPermitServiceClient
+from .f_SecondaryQrCodeLoginPermitService import Iface as FSecondaryQrCodeLoginPermitServiceIface
+from .f_SecondaryQrCodeLoginService import Client as FSecondaryQrCodeLoginServiceClient
+from .f_SecondaryQrCodeLoginService import Iface as FSecondaryQrCodeLoginServiceIface
+from .f_TalkService import Client as FTalkServiceClient
+from .f_TalkService import Iface as FTalkServiceIface
+from .ttypes import *

@@ -1,3 +1,6 @@
+from gevent import monkey
+monkey.patch_all()
+
 import async_timeout, asyncio, aiohttp, httpx, inspect, traceback
 from aiohttp.client import ClientSession
 
@@ -12,6 +15,7 @@ from frugal.exceptions import TTransportExceptionType
 
 from six.moves import urllib
 from httplib2 import Response, Http, ProxyInfo
+import concurrent.futures
 
 class THttpClient(FHttpTransport):
 
@@ -20,7 +24,7 @@ class THttpClient(FHttpTransport):
     headers = None
 
     def __init__(self, url, timeout = 5000, loop = None, request = "httpx", proxy_host = None, proxy_port = None):
-        super().__init__(0)
+        super().__init__(self)
         self.custom_request = request
         self.setTimeout(timeout)
         self.proxy_host, self.proxy_port = proxy_host, proxy_port
@@ -61,7 +65,10 @@ class THttpClient(FHttpTransport):
         payload = payload[4:] 
         self._payload = payload
         self._preflight_request_check(payload)
-        data = await self._make_request(context, self._payload)
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            loop = asyncio.get_event_loop()
+            data = await loop.create_task( self._make_request(context, self._payload))
+            print(type(data))
         if self.code == 400: 
             raise TTransportException(
                 type = 400, 
@@ -93,15 +100,13 @@ class THttpClient(FHttpTransport):
 
     async def _make_request(self, context:FContext, payload):
         sem = asyncio.Semaphore(200)
-        conn = aiohttp.TCPConnector(use_dns_cache = True, loop = self._loop, limit = 0)
         self._headers.update({"Content-Length": str(len(payload))})
         async with sem:
             if self._timeout >= 5000:
                 try:
-                    async with async_timeout.timeout(self._timeout / 1000) as _client:
-                        _client.update(self._loop.time() + self._timeout /1000)
+                    async with async_timeout.timeout(self._timeout / 1000):
                         if self.custom_request == "httpx":
-                            response = await self.client.request("POST", self.path, data = payload, headers = self._headers)
+                            response = await self.client.request("POST", self.path, content = payload, headers = self._headers)
                             if inspect.iscoroutine(response):
                                 self.response = await response.read()
                             else:
@@ -118,6 +123,7 @@ class THttpClient(FHttpTransport):
                                     self.code = response.status
                                     self.message = response.reason
                                     self.headers = response.headers
+                        return self.response
                 except asyncio.TimeoutError:
                     raise TTransportException(
                         type = TTransportExceptionType.TIMED_OUT,
@@ -125,7 +131,7 @@ class THttpClient(FHttpTransport):
                     )
             else:
                 if self.custom_request == "httpx":
-                    response = await self.client.request("POST", self.path, data = payload, headers = self._headers)
+                    response = await self.client.request("POST", self.path, content = payload, headers = self._headers)
                     if inspect.iscoroutine(response):
                         self.response = await response.read()
                     else:
@@ -136,7 +142,7 @@ class THttpClient(FHttpTransport):
                     self.__set_response(headers)
                 elif self.custom_request == "aiohttp":
                     try:
-                        async with ClientSession(connector = conn) as session:
+                        async with ClientSession(connector = aiohttp.TCPConnector(use_dns_cache=True, loop=self._loop, limit=0) ) as session:
                             async with session.post(self._url, data = payload, headers = self._headers) as response:
                                 self.response = await response.content.read()
                                 self.code = response.status
