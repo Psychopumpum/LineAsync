@@ -1,5 +1,4 @@
 from .config import Config
-
 import re, os
 import httpx, time, base64
 import axolotl_curve25519 as curve
@@ -16,7 +15,8 @@ class Server(Config):
         self.timelineHeaders = {}
         self.liffHeaders     = {}
         self.pollHeaders     = {}
-        self._session        = httpx.AsyncClient(http2 = True)
+        limits = httpx.Limits(max_keepalive_connections=10, max_connections=10)
+        self._session        = httpx.AsyncClient(limits = limits, http2 = True)
 
     def setHeadersWithDict(self, headersDict):
         self.talkHeaders.update(headersDict)
@@ -48,26 +48,28 @@ class Server(Config):
         headerList.update(newSource)
         return headerList
 
-    async def request(self, method: str, url, *args, **kwargs):
+    async def request(self, method: str, url, arr: str = "json", *args, **kwargs):
         method = method.upper()
         result = {}
-        async with self._session as client:
-            if method == "GET":
-                response = await client.get(url, *args, timeout = None, **kwargs)
-            elif method == "POST":
-                response = await client.post(url, *args, **kwargs)
-            elif method == "PUT":
-                response = await client.put(url, *args, **kwargs)
-            elif method == "HEAD":
-                response = await client.head(url, *args, **kwargs)
-            elif method == "DELETE":
-                response = await client.delete(url, *args, timeout = None, **kwargs)
+        if method == "GET":
+            response = await self._session.get(url, *args, timeout = None, **kwargs)
+        elif method == "POST":
+            response = await self._session.post(url, *args, timeout = None, **kwargs)
+        elif method == "PUT":
+            response = await self._session.put(url, *args, **kwargs)
+        elif method == "HEAD":
+            response = await self._session.head(url, *args, **kwargs)
+        elif method == "DELETE":
+            response = await self._session.delete(url, *args, timeout = None, **kwargs)
+        if arr == 'json':
             result.update({
                 'code': response.status_code,
                 'text': response.text,
-                'json': response.json()
+                'json': response.json(),
+                'headers': response.headers
             })
             return result
+        return response
 
     def generateSecret(self, email = False):
         privateKey = curve.generatePrivateKey(os.urandom(32))

@@ -23,7 +23,7 @@ class THttpClient(FHttpTransport):
     message = None
     headers = None
 
-    def __init__(self, url, timeout = 5000, loop = None, request = "httpx", proxy_host = None, proxy_port = None):
+    def __init__(self, url, timeout = 5000, loop = None, request = "httpx", proxy_host = None, proxy_port = None, client = None):
         super().__init__(self)
         self.custom_request = request
         self.setTimeout(timeout)
@@ -47,7 +47,8 @@ class THttpClient(FHttpTransport):
                 self.client   = Http(timeout = self._timeout, proxy_info=ProxyInfo(proxy_type = 3, proxy_host = self.proxy_host, proxy_port = self.proxy_port))
                 self.response = Response
             elif self.custom_request == "httpx":
-                self.client   = httpx.AsyncClient(base_url='%s://%s' % (self.scheme, self.host), http2 = True, timeout = self._timeout)
+                self.client   = client
+                #httpx.AsyncClient(base_url='%s://%s' % (self.scheme, self.host), http2 = True, timeout = self._timeout)
         self._url = url
         self._loop = loop if loop else asyncio.new_event_loop()
         self._headers = {
@@ -105,7 +106,7 @@ class THttpClient(FHttpTransport):
                 try:
                     async with async_timeout.timeout(self._timeout / 1000):
                         if self.custom_request == "httpx":
-                            response = await self.client.request("POST", self.path, content = payload, headers = self._headers)
+                            response = await self.client.request("POST", self._url, content = payload, headers = self._headers)
                             if inspect.iscoroutine(response):
                                 self.response = await response.read()
                             else:

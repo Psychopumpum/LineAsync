@@ -1,5 +1,7 @@
 from .auth import Auth
+from .models import Models
 from .talk import Talk
+from .timeline import Timeline
 from .oepoll import OEPoll
 from .handlers import Methods, Handler, BaseClient
 
@@ -8,7 +10,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 
 from LineFrugal.ttypes import TalkException
 
-class Client(Auth, Talk, Methods, BaseClient):
+class Client(Auth, Models, Talk, Timeline, Methods, BaseClient):
 
     BLACK = '\033[30m'
     RED = '\033[31m'
@@ -64,7 +66,9 @@ class Client(Auth, Talk, Methods, BaseClient):
                 self._loop.run_until_complete(self.loginWithQrCode())
         elif not (idOrAccessToken or idOrAccessToken and passwd):
             self._loop.run_until_complete(self.loginWithQrCode())
+        Models.__init__(self)
         Talk.__init__(self)
+        Timeline.__init__(self)
         if self.isLoggedIn:
             self.poll        = OEPoll(self)
         self.printSuccess

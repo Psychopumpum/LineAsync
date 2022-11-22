@@ -4,7 +4,7 @@ import (
     "fmt"
     "flag"
     "os"
-    "./go-qrcode"
+    "./qrCode"
 )
 func usage() {
     fmt.Fprintf(os.Stderr, "usage: %s [inputfile]\n", os.Args[0])

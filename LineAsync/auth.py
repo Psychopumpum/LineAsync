@@ -11,6 +11,7 @@ from thrift.protocol.TCompactProtocol import TCompactProtocolAcceleratedFactory
 from LineFrugal import (
     FTalkServiceClient,
     FAuthServiceClient,
+    FChannelServiceClient,
     FSecondaryQrCodeLoginServiceClient,
     FSecondaryQrCodeLoginPermitServiceClient,
     FSecondaryQrCodeLoginPermitNoticeServiceClient
@@ -65,7 +66,7 @@ class Auth(Server):
             self.server.TALK_SERVER_HOST + self.server.SECONDARY_QR_LOGIN,
             FSecondaryQrCodeLoginServiceClient,
             60000,
-            request = "httpx"
+            request = "aiohttp"
         )
         hr = self.server.talkHeaders
         if self.send_to:
@@ -79,7 +80,7 @@ class Auth(Server):
             self.server.TALK_SERVER_HOST + self.server.SECONDARY_VERIFY_LOGIN,
             FSecondaryQrCodeLoginPermitNoticeServiceClient,
             60000,
-            request = "httpx"
+            request = "aiohttp"
         )
         hr.update({
             "X-Line-Access": auth.authSessionId
@@ -148,7 +149,7 @@ class Auth(Server):
             "https://ga2.line.naver.jp/api/v4/TalkService.do",
             FAuthServiceClient,
             60000,
-            request = "httpx"
+            request = "aiohttp"
         )
         tauth.transport.setCustomHeaders(self.server.talkHeaders)
         rsaKey  = await tauth.call('getRSAKeyInfo', self.provider)
@@ -159,7 +160,7 @@ class Auth(Server):
             "https://ga2.line.naver.jp/api/v4p/rs",
             FAuthServiceClient,
             60000,
-            request = "httpx"
+            request = "aiohttp"
         )
         auth.transport.setCustomHeaders(self.server.talkHeaders)
         lReq = self.__loginRequest(0, {
@@ -234,8 +235,10 @@ class Auth(Server):
             self.server.talkHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.talk = Connection(self.server.TALK_SERVER_HOST + "/S4", FTalkServiceClient, 120000, request = "httpx")
+        self.talk = Connection(self.server.TALK_SERVER_HOST + "/S4", FTalkServiceClient, 120000, request = "httplib2")
         self.talk.transport.setCustomHeaders(self.server.talkHeaders)
+        self.channel = Connection(self.server.TALK_SERVER_HOST + "/CH4", FChannelServiceClient, 120000, request = "httplib2")
+        self.channel.transport.setCustomHeaders(self.server.talkHeaders)
         self.server.pollHeaders.update({
             "X-Line-Access": self.accessToken,
             "Connection": "keep-alive"
@@ -244,15 +247,14 @@ class Auth(Server):
             self.server.pollHeaders.update({
                 "origin": "chrome-extension://ophjlpahpchlmihnnnihgmmeilfjmjjc"
             })
-        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "httpx")
+        self.poll = Connection(self.server.TALK_SERVER_HOST + "/P4", FTalkServiceClient, 4000, request = "aiohttp")
         self.poll.transport.setCustomHeaders(self.server.pollHeaders)
-        self.auth = Connection(self.server.TALK_SERVER_HOST + '/RS4', FAuthServiceClient, 4000, request = "httpx")
+        self.auth = Connection(self.server.TALK_SERVER_HOST + '/RS4', FAuthServiceClient, 4000, request = "httplib2")
         self.auth.transport.setCustomHeaders(self.server.talkHeaders)
         self.profile = await self.talk.call('getProfile', 4)
         self.settings = livejson.File(f"{self.profile.mid}.json", True, True, 4)
         if not self.settings.get("login"):
             self.settings["login"] = {}
-        print(self.appType)
         if not self.settings["login"].get(self.appType):
             self.settings["login"][self.appType] = {}
             self.settings["login"][self.appType].update({

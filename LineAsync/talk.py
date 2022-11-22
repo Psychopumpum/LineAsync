@@ -23,6 +23,18 @@ class Talk(object):
         return self.profile
 
     @loggedIn
+    async def updateProfileAttributes(self, attr, value, metaData: dict = {}):
+        request = UpdateProfileAttributesRequest(
+            {
+                ProfileAttributes._NAMES_TO_VALUES[attr.upper()]: ProfileContent(
+                    value = value,
+                    meta = metaData
+                )
+            }
+        )
+        return await self.talk.call('updateProfileAttributes', 0, request)
+
+    @loggedIn
     async def sendMessage(self, to: str, text: str, contentMetadata: dict = {}, contentType: int = 0) -> Message:
         msg = Message()
         msg.to = to
