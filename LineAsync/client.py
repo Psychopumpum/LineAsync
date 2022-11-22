@@ -1,4 +1,5 @@
 from .auth import Auth
+from .argparsers import ColoredArgumentParser
 from .models import Models
 from .talk import Talk
 from .timeline import Timeline
@@ -69,6 +70,7 @@ class Client(Auth, Models, Talk, Timeline, Methods, BaseClient):
         Models.__init__(self)
         Talk.__init__(self)
         Timeline.__init__(self)
+        self.argparse = ColoredArgumentParser()
         if self.isLoggedIn:
             self.poll        = OEPoll(self)
         self.printSuccess
