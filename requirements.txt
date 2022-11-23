@@ -1,3 +1,5 @@
+nest-asyncio
+unidecode
 aiohttp
 aiosignal
 aiostomp

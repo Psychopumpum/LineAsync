@@ -16,7 +16,7 @@ class Server(Config):
         self.liffHeaders     = {}
         self.pollHeaders     = {}
         limits               = httpx.Limits(max_keepalive_connections=15, max_connections=1000)
-        timeout              = httpx.Timeout(connect=60.0, read=30.0, write=30.0, pool=60.0)
+        timeout              = httpx.Timeout(connect=120.0, read=120.0, write=120.0, pool=120.0)
         self._session        = httpx.AsyncClient(http2 = True, timeout = timeout)
 
     def setHeadersWithDict(self, headersDict):
