@@ -31,7 +31,9 @@ async def main(op):
                     if to not in data:
                         data[to] = {}
                     if msg._from not in data[to]:
-                        data[to][msg._from] = {
+                        data[to][msg._from] = {}
+                    data[to][msg._from].update({
+                        msg._from: {
                             "state": True,
                             "amount": int(cmd),
                             "media": [],
@@ -39,6 +41,7 @@ async def main(op):
                             "types": [],
                             "oid": []
                         }
+                    })
                     return await client.sendMessage(to, "Sent a video or picture...")
                 elif text.lower().startswith('cname') and msg._from in author:
                     cmd = text[len("cname "):]
