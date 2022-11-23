@@ -1,6 +1,3 @@
-from gevent import monkey
-monkey.patch_all()
-
 import async_timeout, asyncio, aiohttp, httpx, inspect, traceback, sys
 from aiohttp.client import ClientSession
 

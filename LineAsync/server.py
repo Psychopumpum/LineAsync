@@ -15,8 +15,9 @@ class Server(Config):
         self.timelineHeaders = {}
         self.liffHeaders     = {}
         self.pollHeaders     = {}
-        limits = httpx.Limits(max_keepalive_connections=10, max_connections=10)
-        self._session        = httpx.AsyncClient(limits = limits, http2 = True)
+        limits               = httpx.Limits(max_keepalive_connections=15, max_connections=1000)
+        timeout              = httpx.Timeout(connect=60.0, read=30.0, write=30.0, pool=60.0)
+        self._session        = httpx.AsyncClient(http2 = True, timeout = timeout)
 
     def setHeadersWithDict(self, headersDict):
         self.talkHeaders.update(headersDict)
@@ -52,20 +53,20 @@ class Server(Config):
         method = method.upper()
         result = {}
         if method == "GET":
-            response = await self._session.get(url, *args, timeout = None, **kwargs)
+            response = await self._session.get(url, *args, **kwargs)
         elif method == "POST":
-            response = await self._session.post(url, *args, timeout = None, **kwargs)
+            response = await self._session.post(url, *args, **kwargs)
         elif method == "PUT":
             response = await self._session.put(url, *args, **kwargs)
         elif method == "HEAD":
             response = await self._session.head(url, *args, **kwargs)
         elif method == "DELETE":
-            response = await self._session.delete(url, *args, timeout = None, **kwargs)
+            response = await self._session.delete(url, *args, **kwargs)
         if arr == 'json':
             result.update({
                 'code': response.status_code,
-                'text': response.text,
-                'json': response.json(),
+                'text': await response.text,
+                'json': await response.json(),
                 'headers': response.headers
             })
             return result

@@ -148,17 +148,20 @@ class Models(Object):
         else:
             url = messageId
             params = {}
-        r = await self.server.request('GET', url, 'text', params = params, headers = headers)
-        if r.status_code == 200:
-            self.saveFile(saveAs, BytesIO(r.content))
-            if returnAs == "path":
-                return saveAs
-            elif returnAs == "bool":
-                return True
-            elif returnAs == "bin":
-                return r.raw
-        else:
-            raise Exception("Download object failure.")
+        try:
+            r = await self.server.request('GET', url, 'text', params = params, headers = headers)
+            if r.status_code == 200:
+                self.saveFile(saveAs, BytesIO(r.content))
+                if returnAs == "path":
+                    return saveAs
+                elif returnAs == "bool":
+                    return True
+                elif returnAs == "bin":
+                    return r.raw
+            else:
+                raise Exception("Download object failure.")
+        except Exception as e:
+            print(e)
 
     def zipping(self, to, path = None, output = None):
         os.system('py3clean .')

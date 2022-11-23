@@ -12,102 +12,6 @@ client = Client("ua4d14b263eaaf5c3f8a28c23fbc648f5:aWF0OiAxNjM4ODM1NzA0MzEzCg==.
 poll = ThreadPoolExecutor(30)
 data = {}
 
-
-def run(corofn, *args):
-    loop = asyncio.new_event_loop()
-    try:
-        coro = corofn(*args)
-        asyncio.set_event_loop(loop)
-        return loop.run_until_complete(coro)
-    finally:
-        loop.close()
-
-async def download(to, msg):
-    if msg.contentType == 1:
-        if to in data and data[to].get(msg._from):
-            if data[to][msg._from]['state']:
-                task = []
-                url = f"{client.server.OBJECT_STORAGE_SERVER_HOST}/talk/m/download.nhn?oid={msg.id}"
-                if url not in data[to][msg._from]["urls"]:
-                    data[to][msg._from]["urls"].append(url)
-                    data[to][msg._from]["types"].append("PHOTO")
-                if len(data[to][msg._from]["urls"]) == data[to][msg._from]["amount"]:
-                    for no, url in enumerate(zip(data[to][msg._from]["urls"], data[to][msg._from]["types"]), start = 1):
-                        name = url[0].split('oid=')[1]
-                        ext = ".mp4" if url[1] == "VIDEO" else ".jpg"
-                        task.append(asyncio.ensure_future(client.downloadObjectMsg(url[0], "path", saveAs = f"downloads/{name}{ext}")))
-                    await client.sendMessage(to, "Progress download has started...")
-                    s_d = time.time()
-                    datas = await asyncio.gather(*task)
-                    tasks = []
-                    for oid in datas:
-                        if oid.endswith(".mp4"):
-                            tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "video", returnAs = "headers", updatePost = True)))
-                        else:
-                            tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "image", returnAs = "headers", updatePost = True)))
-                    task.clear()
-                    await client.sendMessage(to, f"Download completes\n\t• Took: {round(time.time()-s_d, 2)} sec.\n\nCreating a task upload file in progress.")
-                    s_u = time.time()
-                    datas = await asyncio.gather(*tasks)
-                    for oids in tasks:
-                        result = oids.result()
-                        if result.get("x-obs-content-type").startswith("image"):
-                            data[to][msg._from]['media'].append({
-                                "type": "PHOTO",
-                                "objectId": result.get("x-obs-oid")
-                            })
-                        else:
-                            data[to][msg._from]['media'].append({
-                                "type": "VIDEO",
-                                "objectId": result.get("x-obs-oid")
-                            })
-                    await client.sendMessage(to, f"Upload file complete\n\t• Took: {round(time.time()-s_u, 2)} sec.")
-                if len(data[to][msg._from]["media"]) >= data[to][msg._from]["amount"]:
-                    a = await client.createPost(to, medias = data[to][msg._from]["media"])
-                    del data[to][msg._from]
-    elif msg.contentType == 2:
-        if to in data and data[to].get(msg._from):
-            if data[to][msg._from]['state']:
-                task = []
-                url = f"{client.server.OBJECT_STORAGE_SERVER_HOST}/talk/m/download.nhn?oid={msg.id}"
-                if url not in data[to][msg._from]["urls"]:
-                    data[to][msg._from]["urls"].append(url)
-                    data[to][msg._from]["types"].append("VIDEO")
-                if len(data[to][msg._from]["urls"]) == data[to][msg._from]["amount"]:
-                    for no, url in enumerate(zip(data[to][msg._from]["urls"], data[to][msg._from]["types"]), start = 1):
-                        name = url[0].split('oid=')[1]
-                        ext = ".mp4" if url[1] == "VIDEO" else ".jpg"
-                        task.append(asyncio.ensure_future(client.downloadObjectMsg(url[0], "path", saveAs = f"downloads/{name}{ext}")))
-                    await client.sendMessage(to, "Progress download has started...")
-                    s_d = time.time()
-                    datas = await asyncio.gather(*task)
-                    tasks = []
-                    for oid in datas:
-                        if oid.endswith(".mp4"):
-                            tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "video", returnAs = "headers", updatePost = True)))
-                        else:
-                            tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "image", returnAs = "headers", updatePost = True)))
-                    task.clear()
-                    await client.sendMessage(to, f"Download completes\n\t• Took: {round(time.time()-s_d, 2)} sec.\n\nCreating a task upload file in progress.")
-                    s_u = time.time()
-                    datas = await asyncio.gather(*tasks)
-                    for oids in tasks:
-                        result = oids.result()
-                        if result.get("x-obs-content-type").startswith("video"):
-                            data[to][msg._from]['media'].append({
-                                "type": "VIDEO",
-                                "objectId": result.get("x-obs-oid")
-                            })
-                        else:
-                            data[to][msg._from]['media'].append({
-                                "type": "PHOTO",
-                                "objectId": result.get("x-obs-oid")
-                            })
-                    await client.sendMessage(to, f"Upload file complete\n\t• Took: {round(time.time()-s_u, 2)} sec.")
-                if len(data[to][msg._from]["media"]) >= data[to][msg._from]["amount"]:
-                    a = await client.createPost(to, medias = data[to][msg._from]["media"])
-                    del data[to][msg._from]
-
 async def main(op):
     try:
         if op.type == 26:
@@ -158,9 +62,90 @@ async def main(op):
                         if ret.endswith("\n"):ret = ret[:-1]
                         await client.sendMessage(to, ret)
                         ret = ''
-            elif msg.contentType == 1 or msg.contentType == 2:
-                with ThreadPoolExecutor(30) as pools:
-                    r = pools.submit(run, download, to, msg)
+            elif msg.contentType == 1:
+                if to in data and data[to].get(msg._from):
+                    if data[to][msg._from]['state']:
+                        task = []
+                        url = f"{client.server.OBJECT_STORAGE_SERVER_HOST}/talk/m/download.nhn?oid={msg.id}"
+                        if url not in data[to][msg._from]["urls"]:
+                            data[to][msg._from]["urls"].append(url)
+                            data[to][msg._from]["types"].append("PHOTO")
+                        if len(data[to][msg._from]["urls"]) == data[to][msg._from]["amount"]:
+                            for no, urls in enumerate(zip(data[to][msg._from]["urls"], data[to][msg._from]["types"]), start = 1):
+                                name = urls[0].split('oid=')[1]
+                                ext = ".mp4" if urls[1] == "VIDEO" else ".jpg"
+                                task.append(asyncio.ensure_future(client.downloadObjectMsg(urls[0], "path", saveAs = f"downloads/{name}{ext}")))
+                            await client.sendMessage(to, "Progress download has started...")
+                            s_d = time.time()
+                            datas = await asyncio.gather(*task)
+                            tasks = []
+                            for oid in datas:
+                                if oid.endswith(".mp4"):
+                                    tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "video", returnAs = "headers", updatePost = True)))
+                                else:
+                                    tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "image", returnAs = "headers", updatePost = True)))
+                            task.clear()
+                            await client.sendMessage(to, f"Download completes\n\t• Took: {round(time.time()-s_d, 2)} sec.\n\nCreating a task upload file in progress.")
+                            s_u = time.time()
+                            datas = await asyncio.gather(*tasks)
+                            for oids in tasks:
+                                result = oids.result()
+                                if result.get("x-obs-content-type").startswith("image"):
+                                    data[to][msg._from]['media'].append({
+                                        "type": "PHOTO",
+                                        "objectId": result.get("x-obs-oid")
+                                    })
+                                else:
+                                    data[to][msg._from]['media'].append({
+                                        "type": "VIDEO",
+                                        "objectId": result.get("x-obs-oid")
+                                    })
+                            await client.sendMessage(to, f"Upload file complete\n\t• Took: {round(time.time()-s_u, 2)} sec.")
+                        if len(data[to][msg._from]["media"]) >= data[to][msg._from]["amount"]:
+                            a = await client.createPost(to, medias = data[to][msg._from]["media"])
+                            del data[to][msg._from]
+            elif msg.contentType == 2:
+                if to in data and data[to].get(msg._from):
+                    if data[to][msg._from]['state']:
+                        task = []
+                        url = f"{client.server.OBJECT_STORAGE_SERVER_HOST}/talk/m/download.nhn?oid={msg.id}"
+                        if url not in data[to][msg._from]["urls"]:
+                            data[to][msg._from]["urls"].append(url)
+                            data[to][msg._from]["types"].append("VIDEO")
+                        if len(data[to][msg._from]["urls"]) == data[to][msg._from]["amount"]:
+                            for no, url in enumerate(zip(data[to][msg._from]["urls"], data[to][msg._from]["types"]), start = 1):
+                                name = url[0].split('oid=')[1]
+                                ext = ".mp4" if url[1] == "VIDEO" else ".jpg"
+                                task.append(asyncio.ensure_future(client.downloadObjectMsg(url[0], "path", saveAs = f"downloads/{name}{ext}")))
+                            await client.sendMessage(to, "Progress download has started...")
+                            s_d = time.time()
+                            datas = await asyncio.gather(*task)
+                            tasks = []
+                            for oid in datas:
+                                if oid.endswith(".mp4"):
+                                    tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "video", returnAs = "headers", updatePost = True)))
+                                else:
+                                    tasks.append(asyncio.ensure_future(client.uploadObjectHome(oid, "image", returnAs = "headers", updatePost = True)))
+                            task.clear()
+                            await client.sendMessage(to, f"Download completes\n\t• Took: {round(time.time()-s_d, 2)} sec.\n\nCreating a task upload file in progress.")
+                            s_u = time.time()
+                            datas = await asyncio.gather(*tasks)
+                            for oids in tasks:
+                                result = oids.result()
+                                if result.get("x-obs-content-type").startswith("video"):
+                                    data[to][msg._from]['media'].append({
+                                        "type": "VIDEO",
+                                        "objectId": result.get("x-obs-oid")
+                                    })
+                                else:
+                                    data[to][msg._from]['media'].append({
+                                        "type": "PHOTO",
+                                        "objectId": result.get("x-obs-oid")
+                                    })
+                            await client.sendMessage(to, f"Upload file complete\n\t• Took: {round(time.time()-s_u, 2)} sec.")
+                        if len(data[to][msg._from]["media"]) >= data[to][msg._from]["amount"]:
+                            a = await client.createPost(to, medias = data[to][msg._from]["media"])
+                            del data[to][msg._from]
     except Exception:
         traceback.print_exc()
 
@@ -184,4 +169,5 @@ async def fetch():
         sys.exit("Keyboad interrupt.")
 
 if __name__ == "__main__":
-    client._loop.run_until_complete(fetch())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(fetch())
